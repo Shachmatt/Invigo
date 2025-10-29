@@ -1,0 +1,110 @@
+.navbar {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: space-between;
+  padding: 50px 20px;
+  background: linear-gradient(135deg, #850F8D 0%, #C738BD 100%);
+  color: white;
+  font-family: Arial, sans-serif;
+  margin: 0;
+}
+
+.navbar-left {
+  display: flex;
+  justify-content: space-between;
+}
+
+.lesson-title {
+  font-weight: bold;
+  font-size: 28px;
+}
+
+.lesson-subtitle {
+  font-size: 28px;
+  opacity: 0.8;
+  font-style: italic;
+  justify-self: flex-end;
+}
+.navbar-center {
+  display: flex;
+  flex-direction: row;  /* vodorovně */
+  justify-content: space-between; /* progress vlevo, srdíčka vpravo */
+  align-items: center;
+  width: 100%;
+  flex-wrap: nowrap;    /* zakáže zalamování */
+}
+
+.progress-bar {
+  flex: 1;              /* zabere co nejvíce místa */
+  height: 8px;
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-right: 10px;   /* malá mezera mezi progress a srdíčky */
+}
+
+.progress {
+  height: 100%;
+  background-color: #f8f9d7;
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+.hearts {
+  white-space: nowrap;  /* nikdy se nezalamují */
+  font-size: 24px;
+}
+
+
+
+
+.summary {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1000;
+  background: linear-gradient(135deg, #850F8D 0%, #C738BD 100%);
+  color: white;
+  text-align: center;
+  padding: 24px;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.summary .shoutout {
+  margin: 0;
+  font-size: 1.5rem;
+  line-height: 1.3;
+}
+
+        .xp-award {
+            font-size: 2em;
+            font-weight: bold;
+            color: #F8F9D7;
+            margin-top: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .completion-badge {
+            display: inline-block;
+            min-width: 16rem;
+            background: #F8F9D7;
+            color: #850F8D;
+            padding: 12px 24px;
+            border-radius: 999px;
+            font-weight: bold;
+            font-size: 1rem;
+            margin-top: 4px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .completion-badge:disabled {
+  pointer-events: none;
+  cursor: default;
+  background-color: rgb(196, 196, 196);
+}
