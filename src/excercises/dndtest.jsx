@@ -97,10 +97,8 @@ function ItemRenderer({ id, correct }) {
       // pokud jsou všechny sloty zaplněny, vyhodnoť celkový výsledek
       const allFilled = Object.values(nextState).every((v) => v != null);
       if (allFilled) {
-        const totalCorrect = labels.reduce((sum, _, i) => {
-          return sum + (nextState[`slot${i}`] === options[i] ? 1 : 0);
-        }, 0);
-        onAnswered && onAnswered(totalCorrect === labels.length, 0);
+        // Always pass true to avoid double HP deduction (HP already deducted for mistakes during drops)
+        onAnswered && onAnswered(true, 0);
       }
 
       return nextState;

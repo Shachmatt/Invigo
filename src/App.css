@@ -696,3 +696,175 @@ width: 300px;
   color: #333;
   margin: 0;
 }
+
+/* Ending Component */
+.ending-container {
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+}
+
+.ending-card {
+  background: linear-gradient(135deg, #F8F9D7 0%, #E49BFF 100%);
+  border-radius: 20px;
+  padding: 40px;
+  max-width: 600px;
+  width: 100%;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  text-align: center;
+}
+
+.ending-title {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #850F8D;
+  margin-bottom: 30px;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+}
+
+.ending-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.stat-item {
+  background: white;
+  padding: 20px;
+  border-radius: 15px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #850F8D;
+}
+
+.stat-value.hearts-lost {
+  color: #f44336;
+}
+
+.stat-value.hearts-remaining {
+  color: #4CAF50;
+}
+
+.ending-performance {
+  background: white;
+  padding: 25px;
+  border-radius: 15px;
+  margin-bottom: 25px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.performance-title {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #850F8D;
+  margin-bottom: 15px;
+}
+
+.performance-message {
+  font-size: 1.1rem;
+  color: #333;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.ending-hearts-display {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  font-size: 2.5rem;
+}
+
+.heart-full {
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.heart-lost {
+  opacity: 0.5;
+  filter: grayscale(100%);
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+@media (max-width: 600px) {
+  .ending-container {
+    padding: 10px;
+    min-height: auto;
+  }
+  
+  .ending-card {
+    padding: 20px 15px;
+  }
+  
+  .ending-title {
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+  }
+  
+  .ending-stats {
+    grid-template-columns: 1fr;
+    gap: 15px;
+    margin-bottom: 20px;
+  }
+  
+  .stat-item {
+    padding: 15px;
+  }
+  
+  .stat-label {
+    font-size: 0.85rem;
+  }
+  
+  .stat-value {
+    font-size: 1.5rem;
+  }
+  
+  .ending-performance {
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  
+  .performance-title {
+    font-size: 1.3rem;
+    margin-bottom: 12px;
+  }
+  
+  .performance-message {
+    font-size: 1rem;
+  }
+  
+  .ending-hearts-display {
+    font-size: 2rem;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 375px) {
+  .ending-card {
+    padding: 15px 12px;
+  }
+  
+  .ending-title {
+    font-size: 1.3rem;
+  }
+  
+  .stat-value {
+    font-size: 1.3rem;
+  }
+}

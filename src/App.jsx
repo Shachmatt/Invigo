@@ -6,6 +6,7 @@ import Calc from "./excercises/calc"
 import Game from "./excercises/game"
 import MatchExcercise from './excercises/dndtest';
 import Info from './excercises/info';
+import Ending from './excercises/ending';
 import Bottom from './assets/bottom';
 import Rive from '@rive-app/react-canvas';
 
@@ -13,11 +14,13 @@ function App() {
 
   const [completed, setCompleted] = useState(0);
   const [hearts, setHearts] = useState(3);
+  const initialHearts = 3;
   const [shoutout, setShoutout] = useState("Complete an exercise");
   const [button, setButton] = useState("I have faith in you!");
   const [disabled, setDisabled] = useState(true);
   const [excercise, setExcercise] = useState(0);
   const [link, setLink] = useState(0);
+  const [showEnding, setShowEnding] = useState(false);
 
   // 🔹 Lekce obsahuje typ komponenty
   const lesson = [
@@ -70,23 +73,23 @@ function App() {
     if(type==0){
     setCompleted(completed + 1);
     setDisabled(false);
-    setButton("Continue");
+    setButton("Pokračuj");
     if (isCorrect) {
-      setShoutout("Correct!");
+      setShoutout("Správně!");
     } else {
-      setShoutout("Incorrect :/");
+      setShoutout("Špatně :/");
       setHearts((prevHearts) => prevHearts - 1);
     }} else if (type==1){
       if (isCorrect) {
-      setShoutout("Correct!");
+      setShoutout("Správně!");
     } else {
-      setShoutout("Incorrect :/");
+      setShoutout("Špatně :/");
       setHearts((prevHearts) => prevHearts - 1);
     }
   } else if (type==2) {
     setCompleted(completed + 1);
-    setShoutout("Let's dive in!")
-    setButton("Continue")
+    setShoutout("Pojďme na to!")
+    setButton("Pokračuj")
     setDisabled(false)
   }}
 
@@ -94,19 +97,40 @@ function App() {
     if (hearts === 0) {
       setShoutout("Moc se ti to nepovedlo, je čas udělat pápá!");
       setDisabled(false);
-      setButton("Start over")
+      setButton("Začít znovu")
       setLink(1)
     }
   }, [hearts]);
 
+  useEffect(() => {
+    // When all exercises are completed, prepare to show ending
+    if (completed === lesson.length && hearts > 0 && !showEnding) {
+      setDisabled(false);
+      setButton("Zobraz výsledky");
+      setShoutout("Gratulujeme! Klikni pro zobrazení výsledků!");
+    }
+  }, [completed, hearts, showEnding, lesson.length]);
+
 
 
   function handleClicked() {
-setExcercise(excercise+1)
-setButton("I have faith in you!");
-setShoutout("Complete an excercise");
-setDisabled(true)
-}
+    if (completed === lesson.length && !showEnding) {
+      // Show ending component when all exercises are completed
+      setShowEnding(true);
+      setButton("Začít znovu");
+      setShoutout("Zobraz výsledky!");
+      setDisabled(false);
+      setLink(1);
+    } else if (showEnding) {
+      // Reset everything when clicking "Start over" from ending
+      window.location.href = "/";
+    } else {
+      setExcercise(excercise+1);
+      setButton("To zvládneš!");
+      setShoutout("Dokonči cvičení");
+      setDisabled(true);
+    }
+  }
 const current = lesson[excercise];
 
 
@@ -122,13 +146,20 @@ const current = lesson[excercise];
       />
 
       {/* 🔹 Tady se dynamicky vykreslí správná komponenta */}
- { hearts!==0 && <CurrentExercise
+ { hearts!==0 && !showEnding && <CurrentExercise
         {...current}
         onAnswered={handleAnswered}
       />}
   {hearts===0 && <div className='fail'> <div style={{width: 300, height: 300}}> <Rive src="riváček.riv" /> 
   </div></div>}
-
+  {showEnding && hearts > 0 && (
+    <Ending 
+      heartsLost={initialHearts - hearts}
+      totalExercises={lesson.length}
+      completedExercises={completed}
+      initialHearts={initialHearts}
+    />
+  )}
       
       <Bottom 
         shoutout={shoutout}

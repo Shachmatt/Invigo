@@ -43,7 +43,8 @@ export default function Game({
   useEffect(() => {
     if (index >= 3 && !finished) {
       setFinished(true);
-      onAnswered && onAnswered(score === 3, 0);
+      // Always pass true to avoid double HP deduction (HP already deducted for mistakes during gameplay)
+      onAnswered && onAnswered(true, 0);
     }
   }, [index, finished, onAnswered, score]);
 
