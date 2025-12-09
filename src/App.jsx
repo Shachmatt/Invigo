@@ -21,42 +21,53 @@ function App() {
   const [excercise, setExcercise] = useState(0);
   const [link, setLink] = useState(0);
   const [showEnding, setShowEnding] = useState(false);
+  const [lesson, setLesson] = useState([]);
+  const [lessonTitle, setLessonTitle] = useState("Loading...");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // 🔹 Lekce obsahuje typ komponenty
-  const lesson = [
-    {
-      type: "Info",
-      title: "Vítej v lekci o burze!",
-      icon: "💡",
-      content: "V této lekci se naučíš rozdíl mezi burzou a tržištěm. Burza je organizované místo, kde se obchodují cenné papíry jako akcie velkých společností. Tržiště je místo, kde lidé obchodují se zbožím a produkty denní potřeby."
-    },
-    {
-      type: "Question",
-      question: "Jak se máš?",
-      a1: "Dobře",
-      a2: "Ujde to",
-      a3: "Špatně",
-      a4: "Idk",
-      correct: "Ujde to"
-    },
-    {type: "Calc",
-      question: "Kolik je 1+1",
-      correct: 2,
-      typeResult: "number"
-    },
-    {
-      type: "Game",
-      question: "Burza nebo tržiště?",
-      optionOneName:"Burza",
-      optionTwoName: "Tržiště",
-      optionOneItems: ["Akcie Apple", "Akcie Tesla", "Akcie Microsoft"],
-      optionTwoItems: ["Jablko", "mrkev", "Oblečení"]
-    },
-    {type: "MatchExcercise",
-      options: ["Jablko", "Banán", "Mrkev", "Salát", "lilek"],
-      labels: ["Červené ovoce", "Žluté ovoce", "Oranžové ovoce", "Zelené ovoce", "fialové ovoce"]
+  // Fetch lesson data from API
+  useEffect(() => {
+    // Get lesson ID from URL params or use the latest lesson (ID 1 as default)
+    const urlParams = new URLSearchParams(window.location.search);
+    const lessonId = urlParams.get('id') || '3'; // Default to lesson ID 1, or get from URL
+    
+    fetch(`/api/lessons/${lessonId}`)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to fetch lesson');
+        }
+        return response.json();
+      })
+      .then(data => {
+        setLesson(data.exercises || []);
+        setLessonTitle(data.title || "Lekce");
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Error fetching lesson:', err);
+        setError(err.message);
+        setLoading(false);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (hearts === 0) {
+      setShoutout("Moc se ti to nepovedlo, je čas udělat pápá!");
+      setDisabled(false);
+      setButton("Začít znovu")
+      setLink(1)
     }
-  ];
+  }, [hearts]);
+
+  useEffect(() => {
+    // When all exercises are completed, prepare to show ending
+    if (completed === lesson.length && hearts > 0 && !showEnding) {
+      setDisabled(false);
+      setButton("Zobraz výsledky");
+      setShoutout("Gratulujeme! Klikni pro zobrazení výsledků!");
+    }
+  }, [completed, hearts, showEnding, lesson.length]);
 
   // 🔹 Mapa typů na komponenty
   const componentMap = {
@@ -66,8 +77,6 @@ function App() {
     Game: Game,
     MatchExcercise: MatchExcercise
   };
-
-  const CurrentExercise = componentMap[lesson[excercise].type];
 
   function handleAnswered(isCorrect, type) {
     if(type==0){
@@ -93,23 +102,34 @@ function App() {
     setDisabled(false)
   }}
 
-  useEffect(() => {
-    if (hearts === 0) {
-      setShoutout("Moc se ti to nepovedlo, je čas udělat pápá!");
-      setDisabled(false);
-      setButton("Začít znovu")
-      setLink(1)
-    }
-  }, [hearts]);
+  // Show loading or error state
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', padding: '50px' }}>
+        <p>Načítání lekce...</p>
+      </div>
+    );
+  }
 
-  useEffect(() => {
-    // When all exercises are completed, prepare to show ending
-    if (completed === lesson.length && hearts > 0 && !showEnding) {
-      setDisabled(false);
-      setButton("Zobraz výsledky");
-      setShoutout("Gratulujeme! Klikni pro zobrazení výsledků!");
-    }
-  }, [completed, hearts, showEnding, lesson.length]);
+  if (error) {
+    return (
+      <div style={{ textAlign: 'center', padding: '50px' }}>
+        <p>Chyba při načítání lekce: {error}</p>
+        <p>Ujistěte se, že backend server běží na http://localhost:3001</p>
+      </div>
+    );
+  }
+
+  if (lesson.length === 0) {
+    return (
+      <div style={{ textAlign: 'center', padding: '50px' }}>
+        <p>Lekce neobsahuje žádná cvičení.</p>
+      </div>
+    );
+  }
+
+  const current = lesson[excercise];
+  const CurrentExercise = current ? componentMap[current.type] : null;
 
 
 
@@ -131,22 +151,21 @@ function App() {
       setDisabled(true);
     }
   }
-const current = lesson[excercise];
 
 
 
   return (
     <>
       <Navbar 
-        lessonTitle="Co je burza?" 
-        subtitle="Lekce 3 - Investigo" 
+        lessonTitle={lessonTitle} 
+        subtitle="Investigo" 
         totalExercises={lesson.length} 
         completedExercises={completed} 
         hearts={hearts} 
       />
 
       {/* 🔹 Tady se dynamicky vykreslí správná komponenta */}
- { hearts!==0 && !showEnding && <CurrentExercise
+ { hearts!==0 && !showEnding && CurrentExercise && <CurrentExercise
         {...current}
         onAnswered={handleAnswered}
       />}
