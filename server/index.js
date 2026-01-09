@@ -1,9 +1,14 @@
 import express from "express";
 import bodyParser from "body-parser";
 import pg from "pg";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
-const port = 3001; // Different port from Vite dev server
+const port = process.env.PORT || 3001;
 
 const db = new pg.Pool({
     host: process.env.PGHOST,
@@ -234,7 +239,20 @@ app.post('/api/submit', async (req, res) => {
     }
 });
 
+// Serve static files from the React app build directory
+const distPath = path.join(__dirname, '..', 'dist');
+app.use(express.static(distPath));
+
+// Handle React routing - return all requests to React app (SPA)
+app.get('*', (req, res) => {
+  // Don't serve index.html for API routes
+  if (req.path.startsWith('/api')) {
+    return res.status(404).json({ error: 'API endpoint not found' });
+  }
+  res.sendFile(path.join(distPath, 'index.html'));
+});
+
 app.listen(port, () => {
-  console.log(`Backend server running on port ${port}`);
+  console.log(`Server running on port ${port}`);
 });
 
