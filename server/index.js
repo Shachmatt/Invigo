@@ -244,8 +244,9 @@ const distPath = path.join(__dirname, '..', 'dist');
 app.use(express.static(distPath));
 
 // Handle React routing - return all requests to React app (SPA)
-app.get('*', (req, res) => {
-  // Don't serve index.html for API routes
+// Must be last, after all API routes
+app.use((req, res) => {
+  // Don't serve index.html for API routes (shouldn't reach here, but safety check)
   if (req.path.startsWith('/api')) {
     return res.status(404).json({ error: 'API endpoint not found' });
   }
