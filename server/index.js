@@ -6,11 +6,13 @@ const app = express();
 const port = 3001; // Different port from Vite dev server
 
 const db = new pg.Pool({
-  user: "postgres",
-  host: "localhost",
-  database: "Investigo",
-  password: "exape4861",
-  port: 5432,
+    host: process.env.PGHOST,
+    port: process.env.PGPORT || 5432,
+    database: process.env.PGDATABASE,
+    user: process.env.PGUSER,
+    password: process.env.PGPASSWORD,
+    ssl: process.env.PGSSLMODE ? { rejectUnauthorized: false } : undefined,
+    max: 5,
 });
 
 app.use(bodyParser.urlencoded({ extended: true }));

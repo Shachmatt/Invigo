@@ -30,7 +30,7 @@ function App() {
   useEffect(() => {
     // Get lesson ID from URL params or use the latest lesson (ID 1 as default)
     const urlParams = new URLSearchParams(window.location.search);
-    const lessonId = urlParams.get('id') || '3'; // Default to lesson ID 1, or get from URL
+    const lessonId = urlParams.get('id') || '1'; // Default to lesson ID 1, or get from URL
     
     fetch(`/api/lessons/${lessonId}`)
       .then(response => {
