@@ -8,7 +8,7 @@ import MatchExcercise from './excercises/dndtest';
 import Info from './excercises/info';
 import Ending from './excercises/ending';
 import Bottom from './assets/bottom';
-import { useRive } from '@rive-app/react-canvas';
+import { Rive } from '@rive-app/react-canvas';
 import MedaAnimation from "./assets/meda";
 function App() {
 
