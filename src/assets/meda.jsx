@@ -2,43 +2,55 @@ import { useRive, useStateMachineInput } from '@rive-app/react-canvas';
 import { useEffect, useState } from 'react';
 
 export default function MedaAnimation({ nalada = 0 }) {
-  // Stav pro uložení skutečných názvů, které si zjistíme sami
-  const [detectedConfig, setDetectedConfig] = useState({ sm: "", input: "" });
+  // Tady si budeme ukládat, co jsme zjistili, abychom to vypsali na obrazovku
+  const [debugLog, setDebugLog] = useState("Čekám na Rive...");
+  
+  // Názvy, které zkusíme použít
+  const SM_NAME = "State Machine 1";
+  const INPUT_NAME = "num-správně, špatně"; 
 
   const { rive, RiveComponent } = useRive({
     src: 'meditujici_meda.riv',
+    stateMachines: SM_NAME, // Zkusíme to natvrdo
     autoplay: true,
-    onLoad: () => {
-      // Tady proběhne detektivní práce ihned po načtení
-      if (!rive) return;
-
-      // 1. Zjistíme název State Machine (vezmeme prostě první, co existuje)
-      const machineName = rive.stateMachineNames[0];
-      console.log(machineName)
-      
-      // 2. Zjistíme vstupy
-      const inputs = rive.stateMachineInputs(machineName);
-      // Vezmeme první input, který najdeme (předpokládáme, že tam je jen ten jeden pro náladu)
-      const firstInput = inputs[0];
-      console.log(firstInput)
-
-      if (machineName && firstInput) {
-        console.log(`✅ ÚSPĚCH! Nalezeno: Machine="${machineName}", Input="${firstInput.name}"`);
-        
-        // 3. OKAMŽITĚ NASTAVÍME NA 0 (RESET)
-        // Tohle zajistí, že méďa přestane jásat hned na startu
-        firstInput.value = 0;
-
-        // Uložíme si názvy pro React
-        setDetectedConfig({ sm: machineName, input: firstInput.name });
-      }
-    }
   });
 
-  // Oficiální propojení s Reactem pomocí zjištěných názvů
-  const riveInput = useStateMachineInput(rive, detectedConfig.sm, detectedConfig.input);
+  const riveInput = useStateMachineInput(rive, SM_NAME, INPUT_NAME);
 
-  // Reakce na změny ze cvičení (Question.jsx)
+  // Tento efekt běží, jakmile se Rive načte
+  useEffect(() => {
+    if (rive) {
+      // 1. Zjistíme skutečné názvy v souboru
+      const machines = rive.stateMachineNames;
+      
+      // Pokusíme se najít náš input
+      let foundInput = "NENALEZEN";
+      let allInputs = [];
+      
+      if (machines.length > 0) {
+        // Projdeme vstupy první mašiny
+        const inputs = rive.stateMachineInputs(machines[0]);
+        allInputs = inputs.map(i => i.name);
+        
+        const target = inputs.find(i => i.name === INPUT_NAME);
+        if (target) {
+          foundInput = "NALEZEN A FUNGUJE";
+          // ⚠️ TADY JE TEN FIX - OKAMŽITĚ NULUJEME
+          target.value = 0; 
+        }
+      }
+
+      // Vypíšeme info na obrazovku
+      setDebugLog(
+        `Stav: ${foundInput}\n` +
+        `Mašiny v souboru: ${JSON.stringify(machines)}\n` +
+        `Vstupy v souboru: ${JSON.stringify(allInputs)}\n` +
+        `Hledáme input: "${INPUT_NAME}"`
+      );
+    }
+  }, [rive]);
+
+  // Reakce na změnu nálady z aplikace
   useEffect(() => {
     if (riveInput) {
       riveInput.value = nalada;
@@ -46,8 +58,26 @@ export default function MedaAnimation({ nalada = 0 }) {
   }, [nalada, riveInput]);
 
   return (
-    <div style={{ width: '300px', height: '300px' }}>
-      <RiveComponent />
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <div style={{ width: '300px', height: '300px' }}>
+        <RiveComponent />
+      </div>
+      
+      {/* Tady je ten diagnostický panel */}
+      <div style={{ 
+        background: 'black', 
+        color: '#0f0', 
+        padding: '10px', 
+        marginTop: '10px',
+        borderRadius: '5px',
+        fontFamily: 'monospace',
+        fontSize: '12px',
+        maxWidth: '400px',
+        textAlign: 'left',
+        whiteSpace: 'pre-wrap'
+      }}>
+        {debugLog}
+      </div>
     </div>
   );
 }
