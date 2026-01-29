@@ -1,19 +1,37 @@
-import { useRive } from '@rive-app/react-canvas';
+import { useRive, useStateMachineInput } from '@rive-app/react-canvas';
+import { useEffect } from 'react';
 
-export default function MedaAnimation() {
+// Přidali jsme prop "nalada", abychom mohli zvenčí poslat -1, 0 nebo 1
+export default function MedaAnimation({ nalada = 0 }) {
+  
+  const STATE_MACHINE_NAME = "State Machine 1";
+  // ⚠️ Tady je ten tvůj název přesně jak jsi napsal:
+  const INPUT_NAME = "num-správně, špatně"; 
+
   const { rive, RiveComponent } = useRive({
-    src: 'meditujici_meda.riv', // Zde dej název souboru ve složce public
-    stateMachines: "State Machine 1", // ⚠️ TADY musíš napsat přesný název ze svého Rive souboru!
-    autoplay: true, // Pro obrazovku prohry asi chceš, aby se spustil hned, že?
+    src: 'meditujici_meda.riv', 
+    stateMachines: STATE_MACHINE_NAME, 
+    autoplay: true, 
   });
 
+  // Tady si "sáhneme" na ten konkrétní ovladač uvnitř animace
+  const riveInput = useStateMachineInput(
+    rive,
+    STATE_MACHINE_NAME,
+    INPUT_NAME
+  );
+
+  // Kdykoliv se změní "nalada" (třeba když prohraješ), pošleme to číslo do Rive
+  useEffect(() => {
+    if (riveInput) {
+      // Tady se nastavuje hodnota (např. -1)
+      riveInput.value = nalada;
+    }
+  }, [nalada, riveInput]);
+
   return (
-    // RiveComponent se chová jako div, můžeš mu dát styly
     <RiveComponent 
       style={{ width: '300px', height: '300px' }}
-      // Pokud chceš tu interaktivitu z návodu (hover), nech to tu:
-      onMouseEnter={() => rive && rive.play()}
-      onMouseLeave={() => rive && rive.pause()}
     />
   );
 }
