@@ -114,11 +114,11 @@
         }
 
         .question {
-            font-size: 2.5rem;
+            font-size: 1.5rem;
             font-weight: bold;
             color: #850F8D;
-            margin-bottom: 25px;
-            margin-top: 25px;
+            margin-bottom: 10px;
+            margin-top: 10px;
             margin: auto;
             padding: 2rem;
         }
@@ -408,9 +408,6 @@
   font-family: Arial, sans-serif;
 }
 
-.question {
-  font-weight: bold;
-}
 
 
 .calc-button {
