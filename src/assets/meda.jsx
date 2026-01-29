@@ -14,11 +14,13 @@ export default function MedaAnimation({ nalada = 0 }) {
 
       // 1. Zjistíme název State Machine (vezmeme prostě první, co existuje)
       const machineName = rive.stateMachineNames[0];
+      console.log(machineName)
       
       // 2. Zjistíme vstupy
       const inputs = rive.stateMachineInputs(machineName);
       // Vezmeme první input, který najdeme (předpokládáme, že tam je jen ten jeden pro náladu)
       const firstInput = inputs[0];
+      console.log(firstInput)
 
       if (machineName && firstInput) {
         console.log(`✅ ÚSPĚCH! Nalezeno: Machine="${machineName}", Input="${firstInput.name}"`);
