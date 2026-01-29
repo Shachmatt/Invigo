@@ -1,36 +1,33 @@
 import { useRive, useStateMachineInput } from '@rive-app/react-canvas';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function MedaAnimation({ nalada = 0 }) {
-  const STATE_MACHINE_NAME = "State Machine 1";
+  // 1. Necháme State Machine zatím prázdnou, zjistíme ji za běhu
+  const [stateMachineName, setStateMachineName] = useState("");
   const INPUT_NAME = "num-správně, špatně"; 
 
   const { rive, RiveComponent } = useRive({
     src: 'meditujici_meda.riv',
-    stateMachines: STATE_MACHINE_NAME,
     autoplay: true,
     onLoad: () => {
-      console.log("✅ Rive načteno");
+      if (rive) {
+        // Zjistíme, jak se jmenuje první State Machine v souboru
+        const machine = rive.stateMachineNames[0];
+        console.log("🔍 Tvoje State Machine se ve skutečnosti jmenuje:", machine);
+        setStateMachineName(machine);
+      }
     }
   });
 
-  const riveInput = useStateMachineInput(rive, STATE_MACHINE_NAME, INPUT_NAME);
+  // 2. Napojíme se na input, až když víme název mašiny
+  const riveInput = useStateMachineInput(rive, stateMachineName, INPUT_NAME);
 
-  // LOGOVÁNÍ PRO DIAGNOSTIKU
   useEffect(() => {
-    if (rive) {
-      // Tohle nám vypíše VŠECHNY dostupné vstupy do konzole
-      const inputs = rive.stateMachineInputs(STATE_MACHINE_NAME);
-      console.log("Dostupné vstupy v Rive:", inputs.map(i => i.name));
-      
-      if (riveInput) {
-        console.log("✅ Input nalezen, nastavuji hodnotu:", nalada);
-        riveInput.value = nalada;
-      } else {
-        console.error(`❌ Input "${INPUT_NAME}" nebyl nalezen!`);
-      }
+    if (riveInput) {
+      console.log("✅ ÚSPĚCH! Posílám hodnotu:", nalada);
+      riveInput.value = nalada;
     }
-  }, [rive, riveInput, nalada]);
+  }, [nalada, riveInput]);
 
   return (
     <div style={{ width: '300px', height: '300px' }}>
