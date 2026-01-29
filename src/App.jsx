@@ -8,8 +8,8 @@ import MatchExcercise from './excercises/dndtest';
 import Info from './excercises/info';
 import Ending from './excercises/ending';
 import Bottom from './assets/bottom';
-import Rive from '@rive-app/react-canvas';
-
+import { useRive } from '@rive-app/react-canvas';
+import MedaAnimation from "./assets/meda";
 function App() {
 
   const [completed, setCompleted] = useState(0);
@@ -169,7 +169,7 @@ function App() {
         {...current}
         onAnswered={handleAnswered}
       />}
-  {hearts===0 && <div className='fail'> <div style={{width: 300, height: 300}}> <Rive src="riváček.riv" /> 
+  {hearts===0 && <div className='fail'> <div style={{width: 300, height: 300}}> <MedaAnimation/> 
   </div></div>}
   {showEnding && hearts > 0 && (
     <Ending 
