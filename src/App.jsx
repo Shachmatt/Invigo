@@ -15,8 +15,7 @@ function App() {
   const [completed, setCompleted] = useState(0);
   const [hearts, setHearts] = useState(3);
   const initialHearts = 3;
-  const [shoutout, setShoutout] = useState("Vyplň cvičení");
-  const [button, setButton] = useState("I have faith in you!");
+  const [button, setButton] = useState("Vyplň cvičení");
   const [disabled, setDisabled] = useState(true);
   const [excercise, setExcercise] = useState(0);
   const [link, setLink] = useState(0);
@@ -53,7 +52,6 @@ function App() {
 
   useEffect(() => {
     if (hearts === 0) {
-      setShoutout("Moc se ti to nepovedlo, je čas udělat pápá!");
       setDisabled(false);
       setButton("Začít znovu")
       setLink(1)
@@ -65,7 +63,6 @@ function App() {
     if (completed === (lesson.length>0) && hearts > 0 && !showEnding) {
       setDisabled(false);
       setButton("Zobraz výsledky");
-      setShoutout("Gratulujeme! Klikni pro zobrazení výsledků!");
     }
   }, [completed, hearts, showEnding, lesson.length]);
 
@@ -84,20 +81,19 @@ function App() {
     setDisabled(false);
     setButton("Pokračuj");
     if (isCorrect) {
-      setShoutout("Správně!");
+      setButton("Správně!");
     } else {
-      setShoutout("Špatně :/");
+      setButton("Špatně :/");
       setHearts((prevHearts) => prevHearts - 1);
     }} else if (type==1){
       if (isCorrect) {
-      setShoutout("Správně!");
+      setButton("Správně!");
     } else {
-      setShoutout("Špatně :/");
+      setButton("Špatně :/");
       setHearts((prevHearts) => prevHearts - 1);
     }
   } else if (type==2) {
     setCompleted(completed + 1);
-    setShoutout("Pojďme na to!")
     setButton("Pokračuj")
     setDisabled(false)
   }}
@@ -138,7 +134,6 @@ function App() {
       // Show ending component when all exercises are completed
       setShowEnding(true);
       setButton("Začít znovu");
-      setShoutout("Zobraz výsledky!");
       setDisabled(false);
       setLink(1);
     } else if (showEnding) {
@@ -146,8 +141,7 @@ function App() {
       window.location.href = "/";
     } else {
       setExcercise(excercise+1);
-      setButton("To zvládneš!");
-      setShoutout("Dokonči cvičení");
+      setButton("Dokonči cvičení");
       setDisabled(true);
     }
   }
@@ -179,7 +173,6 @@ function App() {
   )}
       
       <Bottom 
-        shoutout={shoutout}
         button={button}
         disabled={disabled}
         link={link}
