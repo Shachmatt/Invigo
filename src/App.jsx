@@ -8,7 +8,7 @@ import MatchExcercise from './excercises/dndtest';
 import Info from './excercises/info';
 import Ending from './excercises/ending';
 import Bottom from './assets/bottom';
-import { Rive } from '@rive-app/react-canvas';
+import  Rive  from '@rive-app/react-canvas';
 import MedaAnimation from "./assets/meda";
 function App() {
 
@@ -130,8 +130,7 @@ function App() {
 
 
   function handleClicked() {
-    if (completed === lesson.length && !showEnding) {
-      // Show ending component when all exercises are completed
+if (lesson.length > 0 && completed === lesson.length && hearts > 0 && !showEnding) {      // Show ending component when all exercises are completed
       setShowEnding(true);
       setButton("Začít znovu");
       setDisabled(false);
