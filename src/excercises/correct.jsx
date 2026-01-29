@@ -1,14 +1,17 @@
 import { useState } from "react";
+import MedaAnimation from "../assets/meda";
 
 function Question({ question, a1, a2, a3, a4, correct, onAnswered }) {
   const [selected, setSelected] = useState(null);
-  const [isCorrect, setIsCorrect] = useState(null);
+  const [isCorrect, setIsCorrect] = useState(0);
+ 
 
   function handleClick(answer) {
     if (selected === null) {
       setSelected(answer);
       setIsCorrect(answer === correct);
     if (onAnswered) onAnswered(answer===correct, 0); 
+    
 
     }
   }
@@ -25,6 +28,11 @@ function Question({ question, a1, a2, a3, a4, correct, onAnswered }) {
     <>
     <center>
       <p className="question">{question}</p></center>
+
+       <MedaAnimation 
+    nalada={isCorrect} />
+
+
       <div className="answers">
    {[a1, a2, a3, a4].map((answer, i) => (
   <button
