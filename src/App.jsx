@@ -157,8 +157,6 @@ function App() {
   return (
     <>
       <Navbar 
-        lessonTitle={lessonTitle} 
-        subtitle="Investigo" 
         totalExercises={lesson.length} 
         completedExercises={completed} 
         hearts={hearts} 
