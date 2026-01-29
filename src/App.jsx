@@ -160,8 +160,8 @@ if (lesson.length > 0 && completed === lesson.length && hearts > 0 && !showEndin
         {...current}
         onAnswered={handleAnswered}
       />}
-  {hearts===0 && <div className='fail'> <div style={{width: 300, height: 300}}> <Rive src="riváček.riv" /> 
-  </div></div>}
+  {hearts===0 && <div className='fail'> <div style={{width: 300, height: 300}}> <Rive autoplay={true} src="riváček.riv" /> 
+  </div><h1>Moc se ti to nepovedlo, je čas udělat pápá</h1></div>}
   {showEnding && hearts > 0 && (
     <Ending 
       heartsLost={initialHearts - hearts}
