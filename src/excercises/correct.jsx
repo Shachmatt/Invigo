@@ -3,13 +3,20 @@ import MedaAnimation from "../assets/meda";
 
 function Question({ question, a1, a2, a3, a4, correct, onAnswered }) {
   const [selected, setSelected] = useState(null);
-  const [isCorrect, setIsCorrect] = useState(0);
+  const [isCorrect, setIsCorrect] = useState(null);
+  const [medaAns, setMedaAns] = useState(0);
  
 
   function handleClick(answer) {
     if (selected === null) {
       setSelected(answer);
       setIsCorrect(answer === correct);
+      const result = (answer === correct)
+      if (result) {
+        setMedaAns(1)
+      } else {
+        setMedaAns(-1)
+      }
     if (onAnswered) onAnswered(answer===correct, 0); 
     
 
@@ -30,7 +37,7 @@ function Question({ question, a1, a2, a3, a4, correct, onAnswered }) {
       <p className="question">{question}</p></center>
 
        <MedaAnimation 
-    nalada={isCorrect} />
+    nalada={medaAns} />
 
 
       <div className="answers">
