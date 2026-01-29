@@ -25,7 +25,7 @@ export default function MedaAnimation({ nalada = 0 }) {
   }, [nalada, riveInput]);
 
   return (
-    <div style={{ width: '300', height: auto, margin: '0 auto' }}>
+    <div style={{ width: '300px', height: "100px", margin: '0 auto' }}>
       <RiveComponent />
     </div>
   );
