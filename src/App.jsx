@@ -167,7 +167,7 @@ function App() {
         {...current}
         onAnswered={handleAnswered}
       />}
-  {hearts===0 && <div className='fail'> <div style={{width: 300, height: 300}}> <MedaAnimation nalada={1}/> 
+  {hearts===0 && <div className='fail'> <div style={{width: 300, height: 300}}> <Rive src="riváček.riv" /> 
   </div></div>}
   {showEnding && hearts > 0 && (
     <Ending 
