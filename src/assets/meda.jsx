@@ -1,4 +1,6 @@
-function MedaAnimation() {
+import { useRive } from '@rive-app/react-canvas';
+
+export default function MedaAnimation() {
   const { rive, RiveComponent } = useRive({
     src: 'meditujici_meda.riv', // Zde dej název souboru ve složce public
     stateMachines: "State Machine 1", // ⚠️ TADY musíš napsat přesný název ze svého Rive souboru!
