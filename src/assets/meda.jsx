@@ -2,29 +2,43 @@ import { useRive, useStateMachineInput } from '@rive-app/react-canvas';
 import { useEffect, useState } from 'react';
 
 export default function MedaAnimation({ nalada = 0 }) {
-  // 1. Necháme State Machine zatím prázdnou, zjistíme ji za běhu
-  const [stateMachineName, setStateMachineName] = useState("");
-  const INPUT_NAME = "num-správně, špatně"; 
+  // Stav pro uložení skutečných názvů, které si zjistíme sami
+  const [detectedConfig, setDetectedConfig] = useState({ sm: "", input: "" });
 
   const { rive, RiveComponent } = useRive({
     src: 'meditujici_meda.riv',
     autoplay: true,
     onLoad: () => {
-      if (rive) {
-        // Zjistíme, jak se jmenuje první State Machine v souboru
-        const machine = rive.stateMachineNames[0];
-        console.log("🔍 Tvoje State Machine se ve skutečnosti jmenuje:", machine);
-        setStateMachineName(machine);
+      // Tady proběhne detektivní práce ihned po načtení
+      if (!rive) return;
+
+      // 1. Zjistíme název State Machine (vezmeme prostě první, co existuje)
+      const machineName = rive.stateMachineNames[0];
+      
+      // 2. Zjistíme vstupy
+      const inputs = rive.stateMachineInputs(machineName);
+      // Vezmeme první input, který najdeme (předpokládáme, že tam je jen ten jeden pro náladu)
+      const firstInput = inputs[0];
+
+      if (machineName && firstInput) {
+        console.log(`✅ ÚSPĚCH! Nalezeno: Machine="${machineName}", Input="${firstInput.name}"`);
+        
+        // 3. OKAMŽITĚ NASTAVÍME NA 0 (RESET)
+        // Tohle zajistí, že méďa přestane jásat hned na startu
+        firstInput.value = 0;
+
+        // Uložíme si názvy pro React
+        setDetectedConfig({ sm: machineName, input: firstInput.name });
       }
     }
   });
 
-  // 2. Napojíme se na input, až když víme název mašiny
-  const riveInput = useStateMachineInput(rive, stateMachineName, INPUT_NAME);
+  // Oficiální propojení s Reactem pomocí zjištěných názvů
+  const riveInput = useStateMachineInput(rive, detectedConfig.sm, detectedConfig.input);
 
+  // Reakce na změny ze cvičení (Question.jsx)
   useEffect(() => {
     if (riveInput) {
-      console.log("✅ ÚSPĚCH! Posílám hodnotu:", nalada);
       riveInput.value = nalada;
     }
   }, [nalada, riveInput]);
