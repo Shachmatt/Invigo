@@ -7,7 +7,7 @@ export default function MedaAnimation({ nalada = 0 }) {
   // Změň podle toho, jak jsi to teď nastavil v Rive
   // Doporučuji v Rive input přejmenovat na "status", je to bezpečnější
   const INPUT_NAME = "Number 1"; 
-  const STATE_MACHINE_NAME = "State Machine 1";
+  const STATE_MACHINE_NAME = "State Machine 2";
 
   const { rive, RiveComponent } = useRive({
     src: 'meditujici_meda.riv', // ⚠️ Soubor musí být ve složce /public/meda.riv
