@@ -15,7 +15,7 @@ function App() {
   const [completed, setCompleted] = useState(0);
   const [hearts, setHearts] = useState(3);
   const initialHearts = 3;
-  const [shoutout, setShoutout] = useState("Complete an exercise");
+  const [shoutout, setShoutout] = useState("Vyplň cvičení");
   const [button, setButton] = useState("I have faith in you!");
   const [disabled, setDisabled] = useState(true);
   const [excercise, setExcercise] = useState(0);
@@ -62,7 +62,7 @@ function App() {
 
   useEffect(() => {
     // When all exercises are completed, prepare to show ending
-    if (completed === lesson.length && hearts > 0 && !showEnding) {
+    if (completed === (lesson.length>0) && hearts > 0 && !showEnding) {
       setDisabled(false);
       setButton("Zobraz výsledky");
       setShoutout("Gratulujeme! Klikni pro zobrazení výsledků!");
