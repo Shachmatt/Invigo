@@ -120,7 +120,8 @@
             margin-bottom: 0px;
             margin-top: 10px;
             margin: auto;
-            padding: 2rem;
+            padding-top: 2rem;
+            padding-bottom: 0;
         }
 
         .answers {
