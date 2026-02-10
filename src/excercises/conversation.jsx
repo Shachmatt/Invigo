@@ -5,9 +5,9 @@ import Rive from '@rive-app/react-canvas';
 
 // 1. Importuj si obrázky postav přímo sem
 // (Předpokládám, že je máš v assets, uprav si cestu podle reality)
-import medvedImg from "/meda_hlava.png"; 
-import holkaImg from "../assets/holka_hlava.png";
-import bykImg from "../assets/byk_hlava.png";
+import medvedImg from "riváček.riv"; 
+import holkaImg from "holčička.riv";
+import bykImg from "úplně_konečný_býk.riv";
 
 function Conversation({ people, messages, onAnswered }) {
 
