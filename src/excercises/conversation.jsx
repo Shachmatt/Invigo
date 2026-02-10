@@ -1,24 +1,21 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react"; // useState už nepotřebujeme
 import "./conversation.css"; 
 import Rive from '@rive-app/react-canvas';
 
-// Cesty k souborům v public složce
+// Cesty k souborům
 const medvedSrc = "/riváček.riv"; 
 const holkaSrc = "/holčička.riv";
 const bykSrc = "/úplně_konečný_býk.riv"; 
 const unknownSrc = "/riváček.riv"; 
 
-function Conversation({ people = [], messages = [], data, onAnswered, subStep = 1}) {
+// Přijímáme prop 'subStep' z App.jsx
+function Conversation({ people = [], messages = [], data, subStep = 1 }) {
 
   // Rozbalení dat
   const rawPeople = people || (data && data.people) || [];
   const rawMessages = messages || (data && data.messages) || [];
 
-  // --- NOVÉ: Stav pro postupné odkrývání ---
-  // Začínáme na 1 (zobrazíme první zprávu hned)
-  const [visibleCount, setVisibleCount] = useState(1);
-  
-  // Reference pro automatické scrollování dolů
+  // Reference pro automatické scrollování
   const messagesEndRef = useRef(null);
 
   // Mapa postav
@@ -39,14 +36,15 @@ function Conversation({ people = [], messages = [], data, onAnswered, subStep = 
 
   const leftSidePersonType = rawPeople.length > 0 ? rawPeople[0] : null;
 
-useEffect(() => {
+  // Efekt: Když App.jsx zvedne subStep, sjedeme dolů
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [subStep]);
 
   return (
     <div className="conversation-container">
       <div className="bubbles-list">
-        {/* Zobrazujeme jen část zpráv (slice) podle visibleCount */}
+        {/* Zobrazujeme zprávy podle toho, jaké číslo nám pošle App.jsx (subStep) */}
         {rawMessages.slice(0, subStep).map((text, index) => {
           
           const speakerType = rawPeople[index] || rawPeople[0]; 
@@ -73,10 +71,11 @@ useEffect(() => {
             </div>
           );
         })}
-        {/* Neviditelný prvek na konci seznamu pro scroll */}
+        {/* Neviditelný prvek pro scroll */}
         <div ref={messagesEndRef} />
       </div>
 
+      {/* ❌ ŽÁDNÉ TLAČÍTKO ZDE - ovládá se to přes Bottom v App.jsx */}
       
     </div>
   );
