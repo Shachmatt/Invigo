@@ -18,8 +18,7 @@
     display: flex;
     align-items: flex-end; /* Avatar bude dole u bubliny */
     gap: 10px;
-    opacity: 0;
-    animation: fadeIn 0.5s forwards; /* Efekt postupného zobrazení */
+  
   }
   
   /* Animace aby bubliny naskakovaly postupně */

@@ -11,6 +11,8 @@ var bykImg=  "../../public/úplně_konečný_býk.riv";
 
 function Conversation({ people = [], messages = [], onAnswered }) {
 
+    console.log("Conversation Data:", { people, messages });
+
   // 2. Vytvoř mapovací objekt (Slovník: Název z DB -> Importovaný obrázek)
   const characterMap = {
     "medved": medvedImg,
