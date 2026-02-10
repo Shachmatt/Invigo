@@ -18,38 +18,41 @@ function Conversation({ people, messages, onAnswered }) {
     "byk": bykImg,
   };
 
-  // Pomocná funkce pro získání postavy
-  const getPerson = (id) => {
-    // Najdeme objekt postavy v poli people
-    const personData = people.find((p) => p.id === id);
+const getPersonData = (typeString) => {
+    if (!typeString) return { img: unknownImg, name: "Neznámý" };
     
-    if (!personData) return { name: "Neznámý", avatar: unknownImg };
-
-    // 3. TADY JE TA MAGIE:
-    // Podíváme se, jestli máme obrázek pro 'personData.type' (např. "medved")
-    // Pokud ne, použijeme default
-    const avatarSrc = characterMap[personData.type] || unknownImg;
-
-    return { 
-      name: personData.name, 
-      avatar: avatarSrc 
+    // Převedeme na malá písmena a ořízneme mezery (pro jistotu)
+    const key = typeString.toString().trim().toLowerCase();
+    
+    return characterMap[key] || { 
+      img: unknownImg, 
+      name: key.charAt(0).toUpperCase() + key.slice(1) // Pokud nemáme obrázek, použijeme název jako jméno
     };
   };
 
-  // Zjistíme ID hlavní postavy (obvykle ta první v poli people), ta bude vlevo
-  const mainCharacterId = people.length > 0 ? people[0].id : null;
+  // Určíme, kdo bude vlevo (obvykle Méďa nebo první mluvčí)
+  // Tady říkáme: První osoba v poli 'people' určuje "levou stranu"
+  const leftSidePersonType = people.length > 0 ? people[0] : null;
 
   function handleContinue() {
+    // Typ 2 v App.jsx znamená "jen pokračuj, nepočítej skóre"
     if (onAnswered) onAnswered(true, 2);
   }
 
   return (
     <div className="conversation-container">
       <div className="bubbles-list">
-        {messages.map((msg, index) => {
-          const person = getPerson(msg.personId);
-          // Hlavní postava vlevo, ostatní vpravo
-          const isLeft = msg.personId === mainCharacterId;
+        {messages.map((text, index) => {
+          // TADY JE TA ZMĚNA:
+          // Pro zprávu na indexu [i] vezmeme mluvčího z people na indexu [i]
+          const speakerType = people[index]; 
+          
+          // Získáme obrázek a jméno
+          const { img, name } = getPersonData(speakerType);
+
+          // Rozhodneme, jestli je bublina vlevo nebo vpravo
+          // Pokud je to stejný typ postavy jako ten úplně první v poli, dáme ho vlevo.
+          const isLeft = speakerType === leftSidePersonType;
 
           return (
             <div key={index} className={`bubble-row ${isLeft ? "left" : "right"}`}>
@@ -57,15 +60,15 @@ function Conversation({ people, messages, onAnswered }) {
               {/* Avatar */}
               <div className="avatar-container">
                 <Rive 
-                  src={person.avatar} 
+                  src={img} 
                   className="avatar-img" 
                 />
-                <span className="person-name">{person.name}</span>
+                <span className="person-name">{name}</span>
               </div>
 
-              {/* Bublina */}
+              {/* Bublina s textem */}
               <div className="bubble-content">
-                <p>{msg.text}</p>
+                <p>{text}</p>
               </div>
             </div>
           );
