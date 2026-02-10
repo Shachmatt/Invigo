@@ -9,7 +9,7 @@ var medvedImg = "../../public/riváček.riv";
 var holkaImg = "../../public/holčička.riv";
 var bykImg=  "../../public/úplně_konečný_býk.riv";
 
-function Conversation({ people, messages, onAnswered }) {
+function Conversation({ people = [], messages = [], onAnswered }) {
 
   // 2. Vytvoř mapovací objekt (Slovník: Název z DB -> Importovaný obrázek)
   const characterMap = {
