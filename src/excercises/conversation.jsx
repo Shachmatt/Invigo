@@ -2,69 +2,74 @@ import React from "react";
 import "./conversation.css"; 
 import Rive from '@rive-app/react-canvas';
 
+// 1. OPRAVA CEST: Pokud jsou soubory v /public, stačí lomítko na začátku.
+// Neimportuj je jako proměnné, v Rive src se používají jako stringy.
+const medvedSrc = "/riváček.riv"; 
+const holkaSrc = "/holčička.riv";
+const bykSrc = "/úplně_konečný_býk.riv"; 
+// Pokud nemáš fallback, použij třeba medvěda
+const unknownSrc = "/riváček.riv"; 
 
-// 1. Importuj si obrázky postav přímo sem
-// (Předpokládám, že je máš v assets, uprav si cestu podle reality)
-var medvedImg = "../../public/riváček.riv"; 
-var holkaImg = "../../public/holčička.riv";
-var bykImg=  "../../public/úplně_konečný_býk.riv";
+function Conversation({ people = [], messages = [], data, onAnswered}) {
 
-function Conversation({ people = [], messages = [], onAnswered }) {
+  const rawPeople = people || (data && data.people) || [];
+  const rawMessages = messages || (data && data.messages) || [];
+  
+  console.log("Conversation Data:", { rawPeople, rawMessages });
 
-    console.log("Conversation Data:", { people, messages });
-
-  // 2. Vytvoř mapovací objekt (Slovník: Název z DB -> Importovaný obrázek)
+  // 2. OPRAVA STRUKTURY: Mapujeme klíč rovnou na objekt s cestou A jménem
   const characterMap = {
-    "medved": medvedImg,
-    "holka": holkaImg,
-    "byk": bykImg,
+    "medved": { src: medvedSrc, name: "Pan Méďa" },
+    "holka":  { src: holkaSrc, name: "Anna" },
+    "byk":    { src: bykSrc, name: "Pan Býk" },
   };
 
-const getPersonData = (typeString) => {
-    if (!typeString) return { img: unknownImg, name: "Neznámý" };
+  const getPersonData = (typeString) => {
+    if (!typeString) return { src: unknownSrc, name: "Neznámý" };
     
-    // Převedeme na malá písmena a ořízneme mezery (pro jistotu)
     const key = typeString.toString().trim().toLowerCase();
     
+    // Pokud postavu najdeme v mapě, vrátíme ji. 
+    // Pokud ne, vrátíme fallback s dynamickým jménem.
     return characterMap[key] || { 
-      img: unknownImg, 
-      name: key.charAt(0).toUpperCase() + key.slice(1) // Pokud nemáme obrázek, použijeme název jako jméno
+      src: unknownSrc, 
+      name: key.charAt(0).toUpperCase() + key.slice(1) 
     };
   };
 
-  // Určíme, kdo bude vlevo (obvykle Méďa nebo první mluvčí)
-  // Tady říkáme: První osoba v poli 'people' určuje "levou stranu"
-  const leftSidePersonType = people.length > 0 ? people[0] : null;
+  const leftSidePersonType = rawPeople.length > 0 ? rawPeople[0] : null;
 
   function handleContinue() {
-    // Typ 2 v App.jsx znamená "jen pokračuj, nepočítej skóre"
     if (onAnswered) onAnswered(true, 2);
   }
 
   return (
     <div className="conversation-container">
       <div className="bubbles-list">
-        {messages.map((text, index) => {
-          // TADY JE TA ZMĚNA:
-          // Pro zprávu na indexu [i] vezmeme mluvčího z people na indexu [i]
-          const speakerType = people[index]; 
+        {rawMessages.map((text, index) => {
           
-          // Získáme obrázek a jméno
-          const { img, name } = getPersonData(speakerType);
+          // Získáme typ postavy (např. "medved")
+          // Použijeme operator || pro případ, že people je kratší než messages (cyklení)
+          const speakerType = rawPeople[index] || rawPeople[0]; 
+          
+          // Získáme data (src pro Rive a jméno)
+          const { src, name } = getPersonData(speakerType);
 
-          // Rozhodneme, jestli je bublina vlevo nebo vpravo
-          // Pokud je to stejný typ postavy jako ten úplně první v poli, dáme ho vlevo.
           const isLeft = speakerType === leftSidePersonType;
 
           return (
             <div key={index} className={`bubble-row ${isLeft ? "left" : "right"}`}>
               
-              {/* Avatar */}
+              {/* Avatar - Rive Komponenta */}
               <div className="avatar-container">
-                <Rive 
-                  src={img} 
-                  className="avatar-img" 
-                />
+                {/* Rive potřebuje styl pro velikost, jinak může být obří nebo nulový */}
+                <div style={{ width: '50px', height: '50px', borderRadius: '50%', overflow: 'hidden' }}>
+                    <Rive 
+                      src={src} 
+                      className="avatar-img" // Ujisti se, že v CSS nemáš 'display: none'
+                      autoplay={true}
+                    />
+                </div>
                 <span className="person-name">{name}</span>
               </div>
 
