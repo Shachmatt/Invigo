@@ -1,23 +1,27 @@
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "./conversation.css"; 
 import Rive from '@rive-app/react-canvas';
 
-// 1. OPRAVA CEST: Pokud jsou soubory v /public, stačí lomítko na začátku.
-// Neimportuj je jako proměnné, v Rive src se používají jako stringy.
+// Cesty k souborům v public složce
 const medvedSrc = "/riváček.riv"; 
 const holkaSrc = "/holčička.riv";
 const bykSrc = "/úplně_konečný_býk.riv"; 
-// Pokud nemáš fallback, použij třeba medvěda
 const unknownSrc = "/riváček.riv"; 
 
 function Conversation({ people = [], messages = [], data, onAnswered}) {
 
+  // Rozbalení dat
   const rawPeople = people || (data && data.people) || [];
   const rawMessages = messages || (data && data.messages) || [];
-  
-  console.log("Conversation Data:", { rawPeople, rawMessages });
 
-  // 2. OPRAVA STRUKTURY: Mapujeme klíč rovnou na objekt s cestou A jménem
+  // --- NOVÉ: Stav pro postupné odkrývání ---
+  // Začínáme na 1 (zobrazíme první zprávu hned)
+  const [visibleCount, setVisibleCount] = useState(1);
+  
+  // Reference pro automatické scrollování dolů
+  const messagesEndRef = useRef(null);
+
+  // Mapa postav
   const characterMap = {
     "medved": { src: medvedSrc, name: "Pan Méďa" },
     "holka":  { src: holkaSrc, name: "Anna" },
@@ -26,11 +30,7 @@ function Conversation({ people = [], messages = [], data, onAnswered}) {
 
   const getPersonData = (typeString) => {
     if (!typeString) return { src: unknownSrc, name: "Neznámý" };
-    
     const key = typeString.toString().trim().toLowerCase();
-    
-    // Pokud postavu najdeme v mapě, vrátíme ji. 
-    // Pokud ne, vrátíme fallback s dynamickým jménem.
     return characterMap[key] || { 
       src: unknownSrc, 
       name: key.charAt(0).toUpperCase() + key.slice(1) 
@@ -39,51 +39,64 @@ function Conversation({ people = [], messages = [], data, onAnswered}) {
 
   const leftSidePersonType = rawPeople.length > 0 ? rawPeople[0] : null;
 
-  function handleContinue() {
-    if (onAnswered) onAnswered(true, 2);
-  }
+  // --- NOVÉ: Funkce pro tlačítko ---
+  const handleNextStep = () => {
+    if (visibleCount < rawMessages.length) {
+      // Pokud zbývají zprávy, zobrazíme další
+      setVisibleCount(prev => prev + 1);
+    } else {
+      // Pokud jsme na konci, dokončíme cvičení (odemkneme App.jsx)
+      if (onAnswered) onAnswered(true, 2);
+    }
+  };
+
+  // --- NOVÉ: Efekt pro scrollování ---
+  // Vždy když se změní počet zpráv, sjedeme dolů
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [visibleCount]);
+
+
+  // Zjistíme, jestli jsme na konci (pro změnu textu tlačítka)
+  const isLastMessage = visibleCount >= rawMessages.length;
 
   return (
     <div className="conversation-container">
       <div className="bubbles-list">
-        {rawMessages.map((text, index) => {
+        {/* Zobrazujeme jen část zpráv (slice) podle visibleCount */}
+        {rawMessages.slice(0, visibleCount).map((text, index) => {
           
-          // Získáme typ postavy (např. "medved")
-          // Použijeme operator || pro případ, že people je kratší než messages (cyklení)
           const speakerType = rawPeople[index] || rawPeople[0]; 
-          
-          // Získáme data (src pro Rive a jméno)
           const { src, name } = getPersonData(speakerType);
-
           const isLeft = speakerType === leftSidePersonType;
 
           return (
             <div key={index} className={`bubble-row ${isLeft ? "left" : "right"}`}>
               
-              {/* Avatar - Rive Komponenta */}
               <div className="avatar-container">
-                {/* Rive potřebuje styl pro velikost, jinak může být obří nebo nulový */}
                 <div style={{ width: '50px', height: '50px', borderRadius: '50%', overflow: 'hidden' }}>
                     <Rive 
                       src={src} 
-                      className="avatar-img" // Ujisti se, že v CSS nemáš 'display: none'
+                      className="avatar-img" 
                       autoplay={true}
                     />
                 </div>
                 <span className="person-name">{name}</span>
               </div>
 
-              {/* Bublina s textem */}
               <div className="bubble-content">
                 <p>{text}</p>
               </div>
             </div>
           );
         })}
+        {/* Neviditelný prvek na konci seznamu pro scroll */}
+        <div ref={messagesEndRef} />
       </div>
 
-      <button className="continue-btn" onClick={handleContinue}>
-        Rozumím, pokračovat
+      {/* Tlačítko mění funkci a text */}
+      <button className="continue-btn" onClick={handleNextStep}>
+        {isLastMessage ? "Dokončit konverzaci" : "Dále..."}
       </button>
     </div>
   );
