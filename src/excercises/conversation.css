@@ -1,0 +1,115 @@
+.conversation-container {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .bubbles-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .bubble-row {
+    display: flex;
+    align-items: flex-end; /* Avatar bude dole u bubliny */
+    gap: 10px;
+    opacity: 0;
+    animation: fadeIn 0.5s forwards; /* Efekt postupného zobrazení */
+  }
+  
+  /* Animace aby bubliny naskakovaly postupně */
+  .bubble-row:nth-child(1) { animation-delay: 0.1s; }
+  .bubble-row:nth-child(2) { animation-delay: 0.8s; }
+  .bubble-row:nth-child(3) { animation-delay: 1.5s; }
+  .bubble-row:nth-child(4) { animation-delay: 2.2s; }
+  
+  .bubble-row.left {
+    flex-direction: row; /* Zleva doprava */
+  }
+  
+  .bubble-row.right {
+    flex-direction: row-reverse; /* Zprava doleva */
+  }
+  
+  .avatar-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 50px;
+  }
+  
+  .avatar-img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #ddd;
+  }
+  
+  .avatar-placeholder {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #eee;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: #555;
+  }
+  
+  .person-name {
+    font-size: 10px;
+    margin-top: 4px;
+    color: #888;
+  }
+  
+  .bubble-content {
+    max-width: 70%;
+    padding: 12px 16px;
+    border-radius: 18px;
+    font-size: 16px;
+    line-height: 1.4;
+    position: relative;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  }
+  
+  /* Barvy bublin */
+  .left .bubble-content {
+    background-color: #f1f0f0; /* Šedá pro levou stranu */
+    color: #333;
+    border-bottom-left-radius: 4px; /* Ocas bubliny */
+  }
+  
+  .right .bubble-content {
+    background-color: #007bff; /* Modrá pro pravou stranu (nebo tvá brand barva) */
+    color: white;
+    border-bottom-right-radius: 4px; /* Ocas bubliny */
+  }
+  
+  .continue-btn {
+    margin-top: 20px;
+    padding: 12px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    align-self: center;
+    width: 100%;
+  }
+  
+  .continue-btn:hover {
+    background-color: #218838;
+  }
+  
+  @keyframes fadeIn {
+    to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; transform: translateY(10px); }
+  }

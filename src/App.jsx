@@ -1,21 +1,23 @@
 import { useState, useEffect } from 'react' 
 import './App.css'
-import Question from "./excercises/correct"
+import Question from "./excercises/correct";
 import Navbar from "./assets/navbar";
-import Calc from "./excercises/calc"
-import Game from "./excercises/game"
+import Calc from "./excercises/calc";
+import Game from "./excercises/game";
 import MatchExcercise from './excercises/dndtest';
 import Info from './excercises/info';
 import Ending from './excercises/ending';
 import Bottom from './assets/bottom';
-import  Rive  from '@rive-app/react-canvas';
-import MedaAnimation from "./assets/meda";
+import Rive from '@rive-app/react-canvas';
+import Conversation from './excercises/conversation';
+
 function App() {
 
   const [completed, setCompleted] = useState(0);
   const [hearts, setHearts] = useState(3);
   const initialHearts = 3;
-  const [button, setButton] = useState("Vyplň cvičení");
+  const [shoutout, setShoutout] = useState("Complete an exercise");
+  const [button, setButton] = useState("I have faith in you!");
   const [disabled, setDisabled] = useState(true);
   const [excercise, setExcercise] = useState(0);
   const [link, setLink] = useState(0);
@@ -52,6 +54,7 @@ function App() {
 
   useEffect(() => {
     if (hearts === 0) {
+      setShoutout("Moc se ti to nepovedlo, je čas udělat pápá!");
       setDisabled(false);
       setButton("Začít znovu")
       setLink(1)
@@ -60,9 +63,10 @@ function App() {
 
   useEffect(() => {
     // When all exercises are completed, prepare to show ending
-    if (completed === (lesson.length>0) && hearts > 0 && !showEnding) {
+    if (completed === lesson.length && hearts > 0 && !showEnding) {
       setDisabled(false);
       setButton("Zobraz výsledky");
+      setShoutout("Gratulujeme! Klikni pro zobrazení výsledků!");
     }
   }, [completed, hearts, showEnding, lesson.length]);
 
@@ -72,7 +76,8 @@ function App() {
     Question: Question,
     Calc: Calc,
     Game: Game,
-    MatchExcercise: MatchExcercise
+    MatchExcercise: MatchExcercise,
+    Conversation: Conversation
   };
 
   function handleAnswered(isCorrect, type) {
@@ -81,19 +86,20 @@ function App() {
     setDisabled(false);
     setButton("Pokračuj");
     if (isCorrect) {
-      setButton("Správně!");
+      setShoutout("Správně!");
     } else {
-      setButton("Špatně :/");
+      setShoutout("Špatně :/");
       setHearts((prevHearts) => prevHearts - 1);
     }} else if (type==1){
       if (isCorrect) {
-      setButton("Správně!");
+      setShoutout("Správně!");
     } else {
-      setButton("Špatně :/");
+      setShoutout("Špatně :/");
       setHearts((prevHearts) => prevHearts - 1);
     }
   } else if (type==2) {
     setCompleted(completed + 1);
+    setShoutout("Pojďme na to!")
     setButton("Pokračuj")
     setDisabled(false)
   }}
@@ -130,9 +136,11 @@ function App() {
 
 
   function handleClicked() {
-if (lesson.length > 0 && completed === lesson.length && hearts > 0 && !showEnding) {      // Show ending component when all exercises are completed
+    if (completed === lesson.length && !showEnding) {
+      // Show ending component when all exercises are completed
       setShowEnding(true);
       setButton("Začít znovu");
+      setShoutout("Zobraz výsledky!");
       setDisabled(false);
       setLink(1);
     } else if (showEnding) {
@@ -140,7 +148,8 @@ if (lesson.length > 0 && completed === lesson.length && hearts > 0 && !showEndin
       window.location.href = "/";
     } else {
       setExcercise(excercise+1);
-      setButton("Dokonči cvičení");
+      setButton("To zvládneš!");
+      setShoutout("Dokonči cvičení");
       setDisabled(true);
     }
   }
@@ -150,6 +159,8 @@ if (lesson.length > 0 && completed === lesson.length && hearts > 0 && !showEndin
   return (
     <>
       <Navbar 
+        lessonTitle={lessonTitle} 
+        subtitle="Investigo" 
         totalExercises={lesson.length} 
         completedExercises={completed} 
         hearts={hearts} 
@@ -160,8 +171,8 @@ if (lesson.length > 0 && completed === lesson.length && hearts > 0 && !showEndin
         {...current}
         onAnswered={handleAnswered}
       />}
-  {hearts===0 && <div className='fail'> <div style={{width: 300, height: 300}}> <Rive statemachines="State Machine 1" autoplay={true} src="riváček.riv" /> 
-  </div><h1>Moc se ti to nepovedlo, je čas udělat pápá</h1></div>}
+  {hearts===0 && <div className='fail'> <div style={{width: 300, height: 300}}> <Rive src="meditující_méďa.riv" /> 
+  </div></div>}
   {showEnding && hearts > 0 && (
     <Ending 
       heartsLost={initialHearts - hearts}
@@ -172,6 +183,7 @@ if (lesson.length > 0 && completed === lesson.length && hearts > 0 && !showEndin
   )}
       
       <Bottom 
+        shoutout={shoutout}
         button={button}
         disabled={disabled}
         link={link}
