@@ -8,7 +8,7 @@ const holkaSrc = "/holčička.riv";
 const bykSrc = "/úplně_konečný_býk.riv"; 
 const unknownSrc = "/riváček.riv"; 
 
-function Conversation({ people = [], messages = [], data, onAnswered}) {
+function Conversation({ people = [], messages = [], data, onAnswered, subStep = 1}) {
 
   // Rozbalení dat
   const rawPeople = people || (data && data.people) || [];
@@ -39,32 +39,15 @@ function Conversation({ people = [], messages = [], data, onAnswered}) {
 
   const leftSidePersonType = rawPeople.length > 0 ? rawPeople[0] : null;
 
-  // --- NOVÉ: Funkce pro tlačítko ---
-  const handleNextStep = () => {
-    if (visibleCount < rawMessages.length) {
-      // Pokud zbývají zprávy, zobrazíme další
-      setVisibleCount(prev => prev + 1);
-    } else {
-      // Pokud jsme na konci, dokončíme cvičení (odemkneme App.jsx)
-      if (onAnswered) onAnswered(true, 2);
-    }
-  };
-
-  // --- NOVÉ: Efekt pro scrollování ---
-  // Vždy když se změní počet zpráv, sjedeme dolů
-  useEffect(() => {
+useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [visibleCount]);
-
-
-  // Zjistíme, jestli jsme na konci (pro změnu textu tlačítka)
-  const isLastMessage = visibleCount >= rawMessages.length;
+  }, [subStep]);
 
   return (
     <div className="conversation-container">
       <div className="bubbles-list">
         {/* Zobrazujeme jen část zpráv (slice) podle visibleCount */}
-        {rawMessages.slice(0, visibleCount).map((text, index) => {
+        {rawMessages.slice(0, subStep).map((text, index) => {
           
           const speakerType = rawPeople[index] || rawPeople[0]; 
           const { src, name } = getPersonData(speakerType);
@@ -94,10 +77,7 @@ function Conversation({ people = [], messages = [], data, onAnswered}) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Tlačítko mění funkci a text */}
-      <button className="continue-btn" onClick={handleNextStep}>
-        {isLastMessage ? "Dokončit konverzaci" : "Dále..."}
-      </button>
+      
     </div>
   );
 }
