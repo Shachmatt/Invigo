@@ -120,6 +120,11 @@ app.get('/api/lessons/:id', async (req, res) => {
                     transformed.icon = exerciseData.icon || '';
                     transformed.content = exerciseData.content || '';
                     break;
+                case 'Conversation':
+                    transformed.question = exercise.question
+                    transformed.people = exerciseData.people || '';
+                    transformed.messages = exerciseData.messages || "";
+                    break;
             }
             
             return transformed;
