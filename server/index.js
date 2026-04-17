@@ -120,6 +120,12 @@ app.get('/api/lessons/:id', async (req, res) => {
                     transformed.icon = exerciseData.icon || '';
                     transformed.content = exerciseData.content || '';
                     break;
+                case 'MultiChoice':
+                    transformed.question = exercise.question;
+                    transformed.options = exerciseData.options || [];
+                    transformed.correct = exerciseData.correct || [];
+                    break;
+
                 case 'Conversation':
                     transformed.question = exercise.question
                     transformed.people = exerciseData.people || '';
@@ -190,7 +196,14 @@ app.post('/api/submit', async (req, res) => {
                         correct_index: exercise.correct_index
                     };
                     break;
-                    
+
+                case 'MultiChoice':
+                    exerciseData = {
+                        options: exercise.options || [],
+                        correct: exercise.correct || []
+                    };
+                    break;
+
                 case 'MatchExcercise':
                     exerciseData = {
                         options: exercise.options || [],
