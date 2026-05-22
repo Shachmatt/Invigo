@@ -50,6 +50,31 @@ app.get('/api/users', async (req, res) => {
 
 });
 
+
+app.get('/api/users:id', async (req, res) => {
+        try {
+            const userId = parseInt(req.params.id);
+            const result = await db.query(
+                `SELECT * FROM users WHERE id = $1`,
+                [userId]);
+
+             if (lessonResult.rows.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+                    res.json(result.rows[0]);
+
+
+        } catch (err) {
+        console.error('Error fetching users:', err);
+        res.status(500).json({ error: 'Error fetching users' });
+    } 
+
+
+
+
+});
+
+
 // API endpoint to get all lessons
 app.get('/api/lessons', async (req, res) => {
     try {
