@@ -51,7 +51,7 @@ app.get('/api/users', async (req, res) => {
 });
 
 
-app.get('/api/users:id', async (req, res) => {
+app.get('/api/users/:id', async (req, res) => {
         try {
             const userId = parseInt(req.params.id);
             const result = await db.query(
