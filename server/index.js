@@ -32,6 +32,24 @@ app.use((req, res, next) => {
   next();
 });
 
+//API endpoint  to get the user data
+app.get('/api/users', async (req, res) => {
+        try {
+            const result = await db.query(
+                `SELECT * FROM users;`
+            )
+            res.json(result.rows);
+
+        } catch (err) {
+        console.error('Error fetching users:', err);
+        res.status(500).json({ error: 'Error fetching users' });
+    } 
+
+
+
+
+});
+
 // API endpoint to get all lessons
 app.get('/api/lessons', async (req, res) => {
     try {
