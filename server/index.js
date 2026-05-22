@@ -58,7 +58,7 @@ app.get('/api/users/:id', async (req, res) => {
                 `SELECT * FROM users WHERE id = $1`,
                 [userId]);
 
-             if (lessonResult.rows.length === 0) {
+             if (result.rows.length === 0) {
             return res.status(404).json({ error: 'User not found' });
         }
                     res.json(result.rows[0]);
