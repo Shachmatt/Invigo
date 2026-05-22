@@ -131,6 +131,11 @@ app.get('/api/lessons/:id', async (req, res) => {
                     transformed.people = exerciseData.people || '';
                     transformed.messages = exerciseData.messages || "";
                     break;
+
+                case 'VIP':
+                    // Return the full APP_DATA payload as-is
+                    transformed.appData = exerciseData;
+                    break;
             }
             
             return transformed;
@@ -239,6 +244,11 @@ app.post('/api/submit', async (req, res) => {
                         people: exercise.people,
                         messages: exercise.messages
                     };
+                    break;
+
+                case 'VIP':
+                    // Store the full APP_DATA payload as-is
+                    exerciseData = exercise.appData || {};
                     break;
             }
             
