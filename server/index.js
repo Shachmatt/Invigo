@@ -4,6 +4,8 @@ import pg from "pg";
 import path from "path";
 import { fileURLToPath } from "url";
 import { existsSync } from "fs";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,6 +33,62 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
   next();
 });
+
+
+const JWT_SECRET = process.env.JWT_SECRET || "your_fallback_super_secret_key";
+
+app.post('/api/login', async (req, res) => {
+    try {
+        // 1. Grab the keys sent exactly as written in your React Native fetch body
+        const { name, pw } = req.body;
+
+        // Validation safety check
+        if (!name || !pw) {
+            return res.status(400).json({ error: "Missing username or password" });
+        }
+
+        // 2. Query your PostgreSQL pool to find the user
+        // Adjust the column names (e.g., username vs name) if your DB schema is different!
+        const result = await db.query(
+            `SELECT * FROM users WHERE email = $1`, 
+            [name]
+        );
+
+        // If user array comes back empty, stop right here
+        if (result.rows.length === 0) {
+            return res.status(401).json({ error: "Invalid email or password" });
+        }
+
+        const user = result.rows[0];
+
+        // 3. Compare the plaintext 'pw' with the hashed password column from your DB row
+        // Note: Replace 'password_hash' with the exact name of your database column!
+        const isMatch = await bcrypt.compare(pw, user.pw);
+
+        if (!isMatch) {
+            return res.status(401).json({ error: "Invalid email or password" });
+        }
+
+        // 4. Everything matches! Generate a signed JSON Web Token (JWT)
+        const token = jwt.sign(
+            { userId: user.id, username: user.email },
+            JWT_SECRET,
+            { expiresIn: '100d' } // Token auto-expires in 7 days
+        );
+
+        // 5. Send it back to React Native. This resolves as 'data.token' in your app
+        return res.status(200).json({
+            success: true,
+            token: token,
+            user: { id: user.id, username: user.email }
+        });
+
+    } catch (err) {
+        console.error('Error during login execution:', err);
+        return res.status(500).json({ error: 'An internal server error occurred' });
+    }
+});
+
 
 //API endpoint  to get the user data
 app.get('/api/users', async (req, res) => {
