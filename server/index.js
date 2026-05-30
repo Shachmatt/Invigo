@@ -45,14 +45,14 @@ app.post('/api/singin', async (req, res) => {
 
         // Validation safety check
         if (!name || !pw || !email)  {
-            return res.status(400).json({ error: "Missing username or password" });
+            return res.status(400).json({ error: "Missing required fields" });
         }
 
         // 2. Query your PostgreSQL pool to find the user
         // Adjust the column names (e.g., username vs name) if your DB schema is different!
         const result = await db.query(
             `SELECT * FROM users WHERE email = $1`, 
-            [name]
+            [email]
         );
         const result1 = await db.query(
             `SELECT * FROM users WHERE name = $1`,
@@ -75,27 +75,12 @@ const hash = await bcrypt.hash(pw, 10);
              VALUES ($1, $2, $3, 3, 0, 0, $4);`,
             [name, hash, email, sqlFormat]
         )
-        }
+         return res.status(200).json({ success: true });
+        } else {
+            return res.status(400).json({ error: "username or email already taken" });
+        } 
 
-        const user = result.rows[0];
-
-        // 3. Compare the plaintext 'pw' with the hashed password column from your DB row
-        // Note: Replace 'password_hash' with the exact name of your database column!
-        const isMatch = await bcrypt.compare(pw, user.pw);
-
-        if (!isMatch) {
-            return res.status(401).json({ error: "Invalid email or password" });
-        }
-
-        // 4. Everything matches! Generate a signed JSON Web Token (JWT)
-       
-
-        // 5. Send it back to React Native. This resolves as 'data.token' in your app
-        return res.status(200).json({
-            success: true,
-        });
-
-    } catch (err) {
+    } catch (err) { //  This '}' now correctly closes the 'try' block up top
         console.error('Error during login execution:', err);
         return res.status(500).json({ error: 'An internal server error occurred' });
     }
