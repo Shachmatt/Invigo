@@ -60,30 +60,68 @@ const authenticateToken = (req, res, next) => {
 
 
 
-
-
-app.get('/api/user/profile', authenticateToken, async (req, res) => {
+const verifyAndResetDailyHearts = async (req, res, next) => {
     try {
-        // req.user.userId comes straight out of the safely decoded token!
+        // req.user.userId is available because 'authenticateToken' ran right before this!
+        const userId = req.user.userId;
+
+        // 1. Fetch the user's current heart count and the last time their hearts were tracked
+        const userCheck = await db.query(
+            `SELECT hearts, datehearts FROM users WHERE id = $1`,
+            [userId]
+        );
+
+        if (userCheck.rows.length === 0) {
+            return res.status(404).json({ error: "User context not found" });
+        }
+
+        const user = userCheck.rows[0];
+        
+        // 2. Format dates to compare calendar days (ignoring local hours/minutes/seconds)
+        const now = new Date();
+        const todayMidnightUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
+        const lastResetDate = new Date(user.datehearts).toISOString();
+
+        // 3. If today is a completely fresh calendar day, reset their hearts
+        if (lastResetDate < todayMidnightUTC) {
+            console.log(`Resetting hearts to 3 for User ID: ${userId}. New day detected.`);
+            
+            await db.query(
+                `UPDATE users 
+                 SET hearts = 3, datehearts = $1 
+                 WHERE id = $2`,
+                [todayMidnightUTC, userId]
+            );
+        }
+
+        next(); // Move smoothly on to your endpoint route (like /api/user/profile)
+    } catch (err) {
+        console.error("Failed to process daily heart validation sync:", err);
+        return res.status(500).json({ error: "Internal server error syncing health stats" });
+    }
+};
+
+
+
+
+
+app.get('/api/user/profile', authenticateToken, verifyAndResetDailyHearts, async (req, res) => {
+    try {
+        // By the time this code runs, verifyAndResetDailyHearts has already updated their rows if it's a new day!
         const result = await db.query(
-            `SELECT id, name, email, hearts, xp, coins, heartsDate FROM users WHERE id = $1`,
+            `SELECT id, name, email, hearts, xp, coins FROM users WHERE id = $1`,
             [req.user.userId]
         );
 
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: "User not found" });
-        }
-
-        // Return the clean row matrix containing stats
         return res.json(result.rows[0]);
     } catch (err) {
-        console.error('Error fetching profile:', err);
+        console.error('Error fetching profile payload:', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
 
 
-app.post('/api/singin', async (req, res) => {
+app.post('/api/signin', async (req, res) => {
     try {
         // 1. Grab the keys sent exactly as written in your React Native fetch body
         const { name, pw, email } = req.body;
@@ -131,7 +169,36 @@ const hash = await bcrypt.hash(pw, 10);
     }
 });
 
+app.post('/api/user/lose-heart', authenticateToken, async (req, res) => {
+    try {
+        // Safely decrement hearts by 1, but make sure it never goes below 0
+        const result = await db.query(
+            `UPDATE users 
+             SET hearts = GREATEST(0, hearts - 1) 
+             WHERE id = $1 
+             RETURNING hearts, coins, xp`,
+            [req.user.userId]
+        );
 
+        return res.json({
+            success: true,
+            updatedHearts: result.rows[0].hearts
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to update stats" });
+    }
+});
+
+
+
+
+
+    // Middleware helper to reset hearts daily on user interaction
+
+
+
+// Chains both validation layers together back-to-back
 app.post('/api/login', async (req, res) => {
     try {
         // 1. Grab the keys sent exactly as written in your React Native fetch body
@@ -472,6 +539,16 @@ app.post('/api/submit', async (req, res) => {
 });
 
 // Serve static files from the React app build directory (only if dist folder exists)
+
+
+
+
+
+
+
+
+
+
 const distPath = path.join(__dirname, '..', 'dist');
 if (existsSync(distPath)) {
   app.use(express.static(distPath));
@@ -495,6 +572,7 @@ if (existsSync(distPath)) {
     res.status(404).json({ error: 'API endpoint not found' });
   });
 }
+
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
