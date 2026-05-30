@@ -191,7 +191,26 @@ app.post('/api/user/lose-heart', authenticateToken, async (req, res) => {
 });
 
 
+app.post('/api/user/lesson-finish', authenticateToken, async (req, res) => {
+    try {
+        // Safely decrement hearts by 1, but make sure it never goes below 0
+        const result = await db.query(
+            `UPDATE users 
+             SET lessons =  lessons + 1 
+             WHERE id = $1 
+             RETURNING lessons, coins, xp`,
+            [req.user.userId]
+        );
 
+        return res.json({
+            success: true,
+            updatedLessons: result.rows[0].lessons
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to update stats" });
+    }
+});
 
 
     // Middleware helper to reset hearts daily on user interaction
