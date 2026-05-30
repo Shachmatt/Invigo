@@ -37,6 +37,75 @@ app.use((req, res, next) => {
 
 const JWT_SECRET = process.env.JWT_SECRET || "your_fallback_super_secret_key";
 
+
+app.post('/api/singin', async (req, res) => {
+    try {
+        // 1. Grab the keys sent exactly as written in your React Native fetch body
+        const { name, pw, email } = req.body;
+
+        // Validation safety check
+        if (!name || !pw || !email)  {
+            return res.status(400).json({ error: "Missing username or password" });
+        }
+
+        // 2. Query your PostgreSQL pool to find the user
+        // Adjust the column names (e.g., username vs name) if your DB schema is different!
+        const result = await db.query(
+            `SELECT * FROM users WHERE email = $1`, 
+            [name]
+        );
+        const result1 = await db.query(
+            `SELECT * FROM users WHERE name = $1`,
+            [name]
+        )
+
+        // If user array comes back empty, stop right here
+        if (result.rows.length === 0 && result1.rows.length === 0)  {
+            const now = new Date();
+
+// Create a new date stripped of the current time, set to midnight UTC
+const midnightUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+
+const sqlFormat = midnightUTC.toISOString();
+
+const hash = await bcrypt.hash(pw, 10);
+
+        await db.query(
+            `INSERT INTO users (name, pw, email, hearts, xp, coins, datehearts)
+             VALUES ($1, $2, $3, 3, 0, 0, $4);`,
+            [name, hash, email, sqlFormat]
+        )
+        }
+
+        const user = result.rows[0];
+
+        // 3. Compare the plaintext 'pw' with the hashed password column from your DB row
+        // Note: Replace 'password_hash' with the exact name of your database column!
+        const isMatch = await bcrypt.compare(pw, user.pw);
+
+        if (!isMatch) {
+            return res.status(401).json({ error: "Invalid email or password" });
+        }
+
+        // 4. Everything matches! Generate a signed JSON Web Token (JWT)
+        const token = jwt.sign(
+            { userId: user.id, username: user.email },
+            JWT_SECRET,
+            { expiresIn: '15m' } // Token auto-expires in 7 days
+        );
+
+        // 5. Send it back to React Native. This resolves as 'data.token' in your app
+        return res.status(200).json({
+            success: true,
+        });
+
+    } catch (err) {
+        console.error('Error during login execution:', err);
+        return res.status(500).json({ error: 'An internal server error occurred' });
+    }
+});
+
+
 app.post('/api/login', async (req, res) => {
     try {
         // 1. Grab the keys sent exactly as written in your React Native fetch body
@@ -73,7 +142,7 @@ app.post('/api/login', async (req, res) => {
         const token = jwt.sign(
             { userId: user.id, username: user.email },
             JWT_SECRET,
-            { expiresIn: '100d' } // Token auto-expires in 7 days
+            { expiresIn: '15m' } // Token auto-expires in 7 days
         );
 
         // 5. Send it back to React Native. This resolves as 'data.token' in your app
