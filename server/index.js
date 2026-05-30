@@ -109,7 +109,7 @@ app.get('/api/user/profile', authenticateToken, verifyAndResetDailyHearts, async
     try {
         // By the time this code runs, verifyAndResetDailyHearts has already updated their rows if it's a new day!
         const result = await db.query(
-            `SELECT id, name, email, hearts, xp, coins FROM users WHERE id = $1`,
+            `SELECT id, name, email, hearts, xp, lessons, coins FROM users WHERE id = $1`,
             [req.user.userId]
         );
 
@@ -154,8 +154,8 @@ const sqlFormat = midnightUTC.toISOString();
 const hash = await bcrypt.hash(pw, 10);
 
         await db.query(
-            `INSERT INTO users (name, pw, email, hearts, xp, coins, datehearts)
-             VALUES ($1, $2, $3, 3, 0, 0, $4);`,
+            `INSERT INTO users (name, pw, email, hearts, xp, lessons, coins, datehearts)
+             VALUES ($1, $2, $3, 3, 0, 0, 0, $4);`,
             [name, hash, email, sqlFormat]
         )
          return res.status(200).json({ success: true });
