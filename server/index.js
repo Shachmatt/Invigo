@@ -38,6 +38,51 @@ app.use((req, res, next) => {
 const JWT_SECRET = process.env.JWT_SECRET || "your_fallback_super_secret_key";
 
 
+const authenticateToken = (req, res, next) => {
+    // Look for the token in the Authorization header
+    const authHeader = req.headers['authorization'];
+    // Headers usually look like: "Bearer YOUR_JWT_TOKEN", so we split it
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ error: "Access denied. No token provided." });
+    }
+
+    try {
+        // Verify the token using your JWT secret key
+        const decoded = jwt.verify(token, JWT_SECRET);
+        req.user = decoded; // This contains { userId: X, username: Y } that you signed during login
+        next(); // Pass control to the next endpoint function
+    } catch (err) {
+        return res.status(403).json({ error: "Invalid or expired token." });
+    }
+};
+
+
+
+
+
+app.get('/api/user/profile', authenticateToken, async (req, res) => {
+    try {
+        // req.user.userId comes straight out of the safely decoded token!
+        const result = await db.query(
+            `SELECT id, name, email, hearts, xp, coins, heartsDate FROM users WHERE id = $1`,
+            [req.user.userId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        // Return the clean row matrix containing stats
+        return res.json(result.rows[0]);
+    } catch (err) {
+        console.error('Error fetching profile:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+
 app.post('/api/singin', async (req, res) => {
     try {
         // 1. Grab the keys sent exactly as written in your React Native fetch body
@@ -123,7 +168,7 @@ app.post('/api/login', async (req, res) => {
         const token = jwt.sign(
             { userId: user.id, username: user.email },
             JWT_SECRET,
-            { expiresIn: '15m' } // Token auto-expires in 7 days
+            { expiresIn: '7d' } // Token auto-expires in 7 days
         );
 
         // 5. Send it back to React Native. This resolves as 'data.token' in your app
