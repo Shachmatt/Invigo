@@ -88,11 +88,7 @@ const hash = await bcrypt.hash(pw, 10);
         }
 
         // 4. Everything matches! Generate a signed JSON Web Token (JWT)
-        const token = jwt.sign(
-            { userId: user.id, username: user.email },
-            JWT_SECRET,
-            { expiresIn: '15m' } // Token auto-expires in 7 days
-        );
+       
 
         // 5. Send it back to React Native. This resolves as 'data.token' in your app
         return res.status(200).json({
