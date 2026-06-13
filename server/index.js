@@ -28,8 +28,8 @@ app.use((req, res, next) => {
 app.get('/api/lessons', async (req, res) => {
     try {
         const result = await db.query(
-            `SELECT id, title, intro, before_exercise, outro, created_at 
-             FROM lessons 
+            `SELECT id, title, intro, summary, before_exercise, outro, created_at
+             FROM lessons
              ORDER BY created_at DESC`
         );
         res.json(result.rows);
@@ -46,8 +46,8 @@ app.get('/api/lessons/:id', async (req, res) => {
     try {
         // Get lesson data
         const lessonResult = await db.query(
-            `SELECT id, title, intro, before_exercise, outro 
-             FROM lessons 
+            `SELECT id, title, intro, summary, before_exercise, outro
+             FROM lessons
              WHERE id = $1`,
             [lessonId]
         );
@@ -120,6 +120,7 @@ app.get('/api/lessons/:id', async (req, res) => {
             id: lesson.id,
             title: lesson.title,
             intro: lesson.intro,
+            summary: lesson.summary,
             before_exercise: lesson.before_exercise,
             outro: lesson.outro,
             exercises: exercises
