@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 import { existsSync } from "fs";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { OAuth2Client } from "google-auth-library";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -36,6 +37,21 @@ app.use((req, res, next) => {
 
 
 const JWT_SECRET = process.env.JWT_SECRET || "your_fallback_super_secret_key";
+
+// Google OAuth — the WEB client ID is the audience the mobile idToken is signed for.
+const GOOGLE_WEB_CLIENT_ID = process.env.GOOGLE_WEB_CLIENT_ID;
+const googleClient = new OAuth2Client();
+
+// Ensure a unique value for the NOT-NULL/unique `name` column when creating Google users.
+async function uniqueName(base) {
+    let candidate = (base || "user").trim() || "user";
+    for (let i = 0; i < 5; i++) {
+        const taken = await db.query(`SELECT 1 FROM users WHERE name = $1`, [candidate]);
+        if (taken.rows.length === 0) return candidate;
+        candidate = `${base}_${Math.random().toString(36).slice(2, 6)}`;
+    }
+    return `${base}_${Date.now()}`;
+}
 
 
 const authenticateToken = (req, res, next) => {
@@ -168,6 +184,77 @@ const hash = await bcrypt.hash(pw, 10);
         return res.status(500).json({ error: 'An internal server error occurred' });
     }
 });
+
+app.post('/api/auth/google', async (req, res) => {
+    try {
+        const { idToken } = req.body;
+        if (!idToken) {
+            return res.status(400).json({ error: "Missing idToken" });
+        }
+        if (!GOOGLE_WEB_CLIENT_ID) {
+            console.error("GOOGLE_WEB_CLIENT_ID env var is not set");
+            return res.status(500).json({ error: "Google login not configured on server" });
+        }
+
+        // 1. Verify the token actually came from Google and was issued for OUR app
+        const ticket = await googleClient.verifyIdToken({
+            idToken,
+            audience: GOOGLE_WEB_CLIENT_ID,
+        });
+        const payload = ticket.getPayload();
+        const googleId = payload.sub;
+        const email = payload.email;
+        const displayName = payload.name || (email ? email.split('@')[0] : 'user');
+
+        if (!email) {
+            return res.status(400).json({ error: "Google account has no email" });
+        }
+
+        // 2. Already linked? (found by google_id)
+        let result = await db.query(`SELECT * FROM users WHERE oauth = $1`, [googleId]);
+        let user = result.rows[0];
+
+        // 3. Not linked yet — try to LINK to an existing email account
+        if (!user) {
+            result = await db.query(`SELECT * FROM users WHERE email = $1`, [email]);
+            user = result.rows[0];
+            if (user) {
+                await db.query(`UPDATE users SET oauth = $1 WHERE id = $2`, [googleId, user.id]);
+            } else {
+                // 4. Brand-new user — create one (no password)
+                const now = new Date();
+                const midnightUTC = new Date(Date.UTC(
+                    now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()
+                )).toISOString();
+                const name = await uniqueName(displayName);
+                const insert = await db.query(
+                    `INSERT INTO users (name, pw, email, oauth, hearts, xp, lessons, coins, datehearts)
+                     VALUES ($1, NULL, $2, $3, 3, 0, 0, 0, $4)
+                     RETURNING *`,
+                    [name, email, googleId, midnightUTC]
+                );
+                user = insert.rows[0];
+            }
+        }
+
+        // 5. Mint OUR jwt — identical to the email/password login path
+        const token = jwt.sign(
+            { userId: user.id, username: user.email },
+            JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+
+        return res.status(200).json({
+            success: true,
+            token,
+            user: { id: user.id, username: user.email },
+        });
+    } catch (err) {
+        console.error('Google auth error:', err);
+        return res.status(401).json({ error: "Google authentication failed" });
+    }
+});
+
 
 app.post('/api/user/lose-heart', authenticateToken, async (req, res) => {
     try {
