@@ -193,18 +193,40 @@ app.post('/api/user/lose-heart', authenticateToken, async (req, res) => {
 
 app.post('/api/user/lesson-finish', authenticateToken, async (req, res) => {
     try {
-        // Safely decrement hearts by 1, but make sure it never goes below 0
+        const { position } = req.body;
+        if (typeof position !== 'number' || position < 1) {
+            return res.status(400).json({ error: "Missing or invalid 'position' in body" });
+        }
+
+        // Only increment if this is the user's next-up lesson (lessons + 1)
         const result = await db.query(
-            `UPDATE users 
-             SET lessons =  lessons + 1 
-             WHERE id = $1 
+            `UPDATE users
+             SET lessons = COALESCE(lessons, 0) + 1
+             WHERE id = $1 AND COALESCE(lessons, 0) + 1 = $2
              RETURNING lessons, coins, xp`,
-            [req.user.userId]
+            [req.user.userId, position]
         );
+
+        if (result.rows.length === 0) {
+            // No row updated — either user not found OR this was a replay of a finished lesson.
+            const userRow = await db.query(
+                `SELECT lessons, coins, xp FROM users WHERE id = $1`,
+                [req.user.userId]
+            );
+            if (userRow.rows.length === 0) {
+                return res.status(404).json({ error: "User not found" });
+            }
+            return res.json({
+                success: true,
+                updatedLessons: userRow.rows[0].lessons,
+                wasReplay: true,
+            });
+        }
 
         return res.json({
             success: true,
-            updatedLessons: result.rows[0].lessons
+            updatedLessons: result.rows[0].lessons,
+            wasReplay: false,
         });
     } catch (err) {
         console.error(err);
