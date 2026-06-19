@@ -7,6 +7,7 @@ import { existsSync } from "fs";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { OAuth2Client } from "google-auth-library";
+import nodemailer from "nodemailer";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -41,6 +42,31 @@ const JWT_SECRET = process.env.JWT_SECRET || "your_fallback_super_secret_key";
 // Google OAuth — the WEB client ID is the audience the mobile idToken is signed for.
 const GOOGLE_WEB_CLIENT_ID = process.env.GOOGLE_WEB_CLIENT_ID;
 const googleClient = new OAuth2Client();
+
+// Email (Gmail via app password) — used for password-reset codes.
+const mailer = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD,
+    },
+});
+
+async function sendResetEmail(to, code) {
+    await mailer.sendMail({
+        from: `"InvestiGO" <${process.env.GMAIL_USER}>`,
+        to,
+        subject: "Obnovení hesla — InvestiGO",
+        text: `Tvůj ověřovací kód pro obnovení hesla je: ${code}\n\nKód platí 15 minut. Pokud jsi o obnovení nežádal/a, tento e-mail ignoruj.`,
+        html: `
+            <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
+              <h2 style="color: #4b2e2e;">Obnovení hesla</h2>
+              <p>Tvůj ověřovací kód je:</p>
+              <p style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #4b2e2e;">${code}</p>
+              <p style="color: #666;">Kód platí 15 minut. Pokud jsi o obnovení nežádal/a, tento e-mail ignoruj.</p>
+            </div>`,
+    });
+}
 
 // Ensure a unique value for the NOT-NULL/unique `name` column when creating Google users.
 async function uniqueName(base) {
@@ -252,6 +278,88 @@ app.post('/api/auth/google', async (req, res) => {
     } catch (err) {
         console.error('Google auth error:', err);
         return res.status(401).json({ error: "Google authentication failed" });
+    }
+});
+
+
+// Step 1 of password reset: user gives their email, we email a 6-digit code.
+app.post('/api/auth/forgot-password', async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).json({ error: "Chybí e-mail" });
+        }
+
+        const result = await db.query(`SELECT id, pw FROM users WHERE email = $1`, [email.trim()]);
+        const user = result.rows[0];
+
+        // Generate + store a code only if the account exists AND has a password
+        // (Google-only accounts have pw = NULL — they can't reset a password they don't have).
+        if (user && user.pw) {
+            const code = String(Math.floor(100000 + Math.random() * 900000)); // 6 digits
+            const codeHash = await bcrypt.hash(code, 10);
+            const expires = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 min
+
+            await db.query(
+                `UPDATE users SET reset_code = $1, reset_expires = $2 WHERE id = $3`,
+                [codeHash, expires, user.id]
+            );
+
+            try {
+                await sendResetEmail(email.trim(), code);
+            } catch (mailErr) {
+                console.error("Failed to send reset email:", mailErr);
+                return res.status(500).json({ error: "Nepodařilo se odeslat e-mail" });
+            }
+        }
+
+        // Always return success — never reveal whether an account exists.
+        return res.json({ success: true });
+    } catch (err) {
+        console.error('forgot-password error:', err);
+        return res.status(500).json({ error: 'An internal server error occurred' });
+    }
+});
+
+// Step 2 of password reset: verify the code and set the new password.
+app.post('/api/auth/reset-password', async (req, res) => {
+    try {
+        const { email, code, newPassword } = req.body;
+        if (!email || !code || !newPassword) {
+            return res.status(400).json({ error: "Chybí povinná pole" });
+        }
+        if (newPassword.length < 6) {
+            return res.status(400).json({ error: "Heslo musí mít alespoň 6 znaků" });
+        }
+
+        const result = await db.query(
+            `SELECT id, reset_code, reset_expires FROM users WHERE email = $1`,
+            [email.trim()]
+        );
+        const user = result.rows[0];
+
+        if (!user || !user.reset_code || !user.reset_expires) {
+            return res.status(400).json({ error: "Neplatný nebo expirovaný kód" });
+        }
+        if (new Date(user.reset_expires) < new Date()) {
+            return res.status(400).json({ error: "Kód vypršel, požádej o nový" });
+        }
+
+        const codeMatch = await bcrypt.compare(String(code), user.reset_code);
+        if (!codeMatch) {
+            return res.status(400).json({ error: "Neplatný kód" });
+        }
+
+        const hash = await bcrypt.hash(newPassword, 10);
+        await db.query(
+            `UPDATE users SET pw = $1, reset_code = NULL, reset_expires = NULL WHERE id = $2`,
+            [hash, user.id]
+        );
+
+        return res.json({ success: true });
+    } catch (err) {
+        console.error('reset-password error:', err);
+        return res.status(500).json({ error: 'An internal server error occurred' });
     }
 });
 
