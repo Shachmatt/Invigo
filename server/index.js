@@ -49,15 +49,27 @@ const GOOGLE_WEB_CLIENT_ID = process.env.GOOGLE_WEB_CLIENT_ID;
 const googleClient = new OAuth2Client();
 
 // Email (Gmail via app password) — used for password-reset codes.
-const mailer = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD,
-    },
-});
+// Render can't route IPv6, so we resolve Gmail's IPv4 address ourselves and connect
+// straight to it. `servername` keeps TLS certificate validation pointed at the hostname.
+let cachedMailer = null;
+async function getMailer() {
+    if (cachedMailer) return cachedMailer;
+    const { address } = await dns.promises.lookup("smtp.gmail.com", { family: 4 });
+    cachedMailer = nodemailer.createTransport({
+        host: address,
+        port: 465,
+        secure: true,
+        auth: {
+            user: process.env.GMAIL_USER,
+            pass: process.env.GMAIL_APP_PASSWORD,
+        },
+        tls: { servername: "smtp.gmail.com" },
+    });
+    return cachedMailer;
+}
 
 async function sendResetEmail(to, code) {
+    const mailer = await getMailer();
     await mailer.sendMail({
         from: `"InvestiGO" <${process.env.GMAIL_USER}>`,
         to,
