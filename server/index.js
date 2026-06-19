@@ -148,16 +148,34 @@ const verifyAndResetDailyHearts = async (req, res, next) => {
             );
         }
 
-        // Streak upkeep: if the user's last active day is older than yesterday,
-        // they broke the streak — reset it to 0. (last_active = yesterday is still
-        // alive: they can keep it by finishing a lesson today.)
+        // Streak upkeep. last_active within 1 day (today/yesterday) = streak alive.
+        // If days were missed, spend streak freezers to cover them (1 freezer = 1 day);
+        // if there are enough freezers we keep the streak and treat the user as active
+        // yesterday, otherwise the streak breaks and resets to 0.
         await db.query(
             `UPDATE users
-             SET streak = 0
-             WHERE id = $1
-               AND last_active IS NOT NULL
-               AND last_active < CURRENT_DATE - 1
-               AND streak <> 0`,
+             SET
+               streak = CASE
+                   WHEN last_active IS NULL THEN streak
+                   WHEN CURRENT_DATE - last_active <= 1 THEN streak
+                   WHEN COALESCE(streak_freezer, 0) >= (CURRENT_DATE - last_active - 1) THEN streak
+                   ELSE 0
+               END,
+               streak_freezer = CASE
+                   WHEN last_active IS NULL THEN streak_freezer
+                   WHEN CURRENT_DATE - last_active <= 1 THEN streak_freezer
+                   WHEN COALESCE(streak_freezer, 0) >= (CURRENT_DATE - last_active - 1)
+                       THEN streak_freezer - (CURRENT_DATE - last_active - 1)
+                   ELSE streak_freezer
+               END,
+               last_active = CASE
+                   WHEN last_active IS NULL THEN last_active
+                   WHEN CURRENT_DATE - last_active <= 1 THEN last_active
+                   WHEN COALESCE(streak_freezer, 0) >= (CURRENT_DATE - last_active - 1)
+                       THEN CURRENT_DATE - 1
+                   ELSE last_active
+               END
+             WHERE id = $1 AND last_active IS NOT NULL AND CURRENT_DATE - last_active > 1`,
             [userId]
         );
 
@@ -176,7 +194,8 @@ app.get('/api/user/profile', authenticateToken, verifyAndResetDailyHearts, async
     try {
         // By the time this code runs, verifyAndResetDailyHearts has already updated their rows if it's a new day!
         const result = await db.query(
-            `SELECT id, name, email, hearts, xp, lessons, coins, notes, streak FROM users WHERE id = $1`,
+            `SELECT id, name, email, hearts, xp, lessons, coins, notes, streak, streak_freezer
+             FROM users WHERE id = $1`,
             [req.user.userId]
         );
 
@@ -412,6 +431,67 @@ app.post('/api/user/notes', authenticateToken, async (req, res) => {
 });
 
 
+// Shop: buy 1 heart for 50 coins. Capped at the normal daily max of 3 hearts.
+const HEART_COST = 50;
+const HEART_MAX = 3;
+app.post('/api/shop/buy-heart', authenticateToken, async (req, res) => {
+    try {
+        const result = await db.query(
+            `UPDATE users
+             SET hearts = hearts + 1, coins = coins - $2
+             WHERE id = $1 AND coins >= $2 AND hearts < $3
+             RETURNING hearts, coins`,
+            [req.user.userId, HEART_COST, HEART_MAX]
+        );
+
+        if (result.rows.length === 0) {
+            const u = await db.query(`SELECT hearts, coins FROM users WHERE id = $1`, [req.user.userId]);
+            const row = u.rows[0];
+            if (!row) return res.status(404).json({ error: "User not found" });
+            if (row.hearts >= HEART_MAX) {
+                return res.status(400).json({ error: "Máš plný počet životů" });
+            }
+            return res.status(400).json({ error: "Nemáš dost mincí" });
+        }
+
+        return res.json({ success: true, hearts: result.rows[0].hearts, coins: result.rows[0].coins });
+    } catch (err) {
+        console.error('buy-heart error:', err);
+        res.status(500).json({ error: "Failed to buy heart" });
+    }
+});
+
+// Shop: buy 1 streak freezer for 200 coins. Capped at 2 owned.
+const FREEZER_COST = 200;
+const FREEZER_MAX = 2;
+app.post('/api/shop/buy-freezer', authenticateToken, async (req, res) => {
+    try {
+        const result = await db.query(
+            `UPDATE users
+             SET streak_freezer = COALESCE(streak_freezer, 0) + 1, coins = coins - $2
+             WHERE id = $1 AND coins >= $2 AND COALESCE(streak_freezer, 0) < $3
+             RETURNING streak_freezer, coins`,
+            [req.user.userId, FREEZER_COST, FREEZER_MAX]
+        );
+
+        if (result.rows.length === 0) {
+            const u = await db.query(`SELECT streak_freezer, coins FROM users WHERE id = $1`, [req.user.userId]);
+            const row = u.rows[0];
+            if (!row) return res.status(404).json({ error: "User not found" });
+            if ((row.streak_freezer || 0) >= FREEZER_MAX) {
+                return res.status(400).json({ error: "Máš maximální počet mrazáků (2)" });
+            }
+            return res.status(400).json({ error: "Nemáš dost mincí" });
+        }
+
+        return res.json({ success: true, streak_freezer: result.rows[0].streak_freezer, coins: result.rows[0].coins });
+    } catch (err) {
+        console.error('buy-freezer error:', err);
+        res.status(500).json({ error: "Failed to buy freezer" });
+    }
+});
+
+
 app.post('/api/user/lose-heart', authenticateToken, async (req, res) => {
     try {
         // Safely decrement hearts by 1, but make sure it never goes below 0
@@ -459,13 +539,18 @@ app.post('/api/user/lesson-finish', authenticateToken, async (req, res) => {
         );
         const updatedStreak = streakResult.rows[0]?.streak;
 
-        // Only increment if this is the user's next-up lesson (lessons + 1)
+        // Coin reward: a flat 20 plus the current streak (the streak bonus caps at 20).
+        const reward = 20 + Math.min(updatedStreak || 0, 20);
+
+        // Only increment (and pay out coins) if this is the user's next-up lesson (lessons + 1).
+        // Coins are awarded on first completion only — replays don't pay, to avoid farming.
         const result = await db.query(
             `UPDATE users
-             SET lessons = COALESCE(lessons, 0) + 1
+             SET lessons = COALESCE(lessons, 0) + 1,
+                 coins = COALESCE(coins, 0) + $3
              WHERE id = $1 AND COALESCE(lessons, 0) + 1 = $2
              RETURNING lessons, coins, xp`,
-            [req.user.userId, position]
+            [req.user.userId, position, reward]
         );
 
         if (result.rows.length === 0) {
@@ -480,6 +565,8 @@ app.post('/api/user/lesson-finish', authenticateToken, async (req, res) => {
             return res.json({
                 success: true,
                 updatedLessons: userRow.rows[0].lessons,
+                updatedCoins: userRow.rows[0].coins,
+                coinsAwarded: 0,
                 updatedStreak,
                 wasReplay: true,
             });
@@ -488,6 +575,8 @@ app.post('/api/user/lesson-finish', authenticateToken, async (req, res) => {
         return res.json({
             success: true,
             updatedLessons: result.rows[0].lessons,
+            updatedCoins: result.rows[0].coins,
+            coinsAwarded: reward,
             updatedStreak,
             wasReplay: false,
         });
