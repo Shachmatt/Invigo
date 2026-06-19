@@ -1,8 +1,3 @@
-import dns from "node:dns";
-// Render containers can't route IPv6 — force DNS to return IPv4 first so SMTP
-// (and anything else) connects over IPv4 instead of failing with ENETUNREACH.
-dns.setDefaultResultOrder("ipv4first");
-
 import express from "express";
 import bodyParser from "body-parser";
 import pg from "pg";
@@ -12,7 +7,6 @@ import { existsSync } from "fs";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { OAuth2Client } from "google-auth-library";
-import nodemailer from "nodemailer";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -48,41 +42,42 @@ const JWT_SECRET = process.env.JWT_SECRET || "your_fallback_super_secret_key";
 const GOOGLE_WEB_CLIENT_ID = process.env.GOOGLE_WEB_CLIENT_ID;
 const googleClient = new OAuth2Client();
 
-// Email (Gmail via app password) — used for password-reset codes.
-// Render can't route IPv6, so we resolve Gmail's IPv4 address ourselves and connect
-// straight to it. `servername` keeps TLS certificate validation pointed at the hostname.
-let cachedMailer = null;
-async function getMailer() {
-    if (cachedMailer) return cachedMailer;
-    const { address } = await dns.promises.lookup("smtp.gmail.com", { family: 4 });
-    cachedMailer = nodemailer.createTransport({
-        host: address,
-        port: 465,
-        secure: true,
-        auth: {
-            user: process.env.GMAIL_USER,
-            pass: process.env.GMAIL_APP_PASSWORD,
-        },
-        tls: { servername: "smtp.gmail.com" },
-    });
-    return cachedMailer;
-}
+// Email via Resend's HTTPS API (port 443) — works on Render free tier, unlike SMTP.
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+// Must be a verified sender. Use "onboarding@resend.dev" for testing, or your own
+// verified domain in production. Override with the RESEND_FROM env var.
+const RESEND_FROM = process.env.RESEND_FROM || "InvestiGO <onboarding@resend.dev>";
 
 async function sendResetEmail(to, code) {
-    const mailer = await getMailer();
-    await mailer.sendMail({
-        from: `"InvestiGO" <${process.env.GMAIL_USER}>`,
-        to,
-        subject: "Obnovení hesla — InvestiGO",
-        text: `Tvůj ověřovací kód pro obnovení hesla je: ${code}\n\nKód platí 15 minut. Pokud jsi o obnovení nežádal/a, tento e-mail ignoruj.`,
-        html: `
-            <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
-              <h2 style="color: #4b2e2e;">Obnovení hesla</h2>
-              <p>Tvůj ověřovací kód je:</p>
-              <p style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #4b2e2e;">${code}</p>
-              <p style="color: #666;">Kód platí 15 minut. Pokud jsi o obnovení nežádal/a, tento e-mail ignoruj.</p>
-            </div>`,
+    if (!RESEND_API_KEY) {
+        throw new Error("RESEND_API_KEY env var is not set");
+    }
+
+    const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${RESEND_API_KEY}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            from: RESEND_FROM,
+            to: [to],
+            subject: "Obnovení hesla — InvestiGO",
+            text: `Tvůj ověřovací kód pro obnovení hesla je: ${code}\n\nKód platí 15 minut. Pokud jsi o obnovení nežádal/a, tento e-mail ignoruj.`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
+                  <h2 style="color: #4b2e2e;">Obnovení hesla</h2>
+                  <p>Tvůj ověřovací kód je:</p>
+                  <p style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #4b2e2e;">${code}</p>
+                  <p style="color: #666;">Kód platí 15 minut. Pokud jsi o obnovení nežádal/a, tento e-mail ignoruj.</p>
+                </div>`,
+        }),
     });
+
+    if (!res.ok) {
+        const body = await res.text();
+        throw new Error(`Resend API error ${res.status}: ${body}`);
+    }
 }
 
 // Ensure a unique value for the NOT-NULL/unique `name` column when creating Google users.
