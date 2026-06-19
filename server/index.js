@@ -1,3 +1,8 @@
+import dns from "node:dns";
+// Render containers can't route IPv6 — force DNS to return IPv4 first so SMTP
+// (and anything else) connects over IPv4 instead of failing with ENETUNREACH.
+dns.setDefaultResultOrder("ipv4first");
+
 import express from "express";
 import bodyParser from "body-parser";
 import pg from "pg";
