@@ -141,12 +141,25 @@ const verifyAndResetDailyHearts = async (req, res, next) => {
             console.log(`Resetting hearts to 3 for User ID: ${userId}. New day detected.`);
             
             await db.query(
-                `UPDATE users 
-                 SET hearts = 3, datehearts = $1 
+                `UPDATE users
+                 SET hearts = 3, datehearts = $1
                  WHERE id = $2`,
                 [todayMidnightUTC, userId]
             );
         }
+
+        // Streak upkeep: if the user's last active day is older than yesterday,
+        // they broke the streak — reset it to 0. (last_active = yesterday is still
+        // alive: they can keep it by finishing a lesson today.)
+        await db.query(
+            `UPDATE users
+             SET streak = 0
+             WHERE id = $1
+               AND last_active IS NOT NULL
+               AND last_active < CURRENT_DATE - 1
+               AND streak <> 0`,
+            [userId]
+        );
 
         next(); // Move smoothly on to your endpoint route (like /api/user/profile)
     } catch (err) {
@@ -163,7 +176,7 @@ app.get('/api/user/profile', authenticateToken, verifyAndResetDailyHearts, async
     try {
         // By the time this code runs, verifyAndResetDailyHearts has already updated their rows if it's a new day!
         const result = await db.query(
-            `SELECT id, name, email, hearts, xp, lessons, coins, notes FROM users WHERE id = $1`,
+            `SELECT id, name, email, hearts, xp, lessons, coins, notes, streak FROM users WHERE id = $1`,
             [req.user.userId]
         );
 
@@ -428,6 +441,24 @@ app.post('/api/user/lesson-finish', authenticateToken, async (req, res) => {
             return res.status(400).json({ error: "Missing or invalid 'position' in body" });
         }
 
+        // Finishing any lesson counts as activity today — update the daily streak.
+        //  - already active today  → unchanged
+        //  - last active yesterday → +1 (streak continues)
+        //  - otherwise (gap/null)  → reset to 1 (fresh streak starting today)
+        const streakResult = await db.query(
+            `UPDATE users
+             SET streak = CASE
+                     WHEN last_active = CURRENT_DATE THEN streak
+                     WHEN last_active = CURRENT_DATE - 1 THEN COALESCE(streak, 0) + 1
+                     ELSE 1
+                 END,
+                 last_active = CURRENT_DATE
+             WHERE id = $1
+             RETURNING streak`,
+            [req.user.userId]
+        );
+        const updatedStreak = streakResult.rows[0]?.streak;
+
         // Only increment if this is the user's next-up lesson (lessons + 1)
         const result = await db.query(
             `UPDATE users
@@ -449,6 +480,7 @@ app.post('/api/user/lesson-finish', authenticateToken, async (req, res) => {
             return res.json({
                 success: true,
                 updatedLessons: userRow.rows[0].lessons,
+                updatedStreak,
                 wasReplay: true,
             });
         }
@@ -456,6 +488,7 @@ app.post('/api/user/lesson-finish', authenticateToken, async (req, res) => {
         return res.json({
             success: true,
             updatedLessons: result.rows[0].lessons,
+            updatedStreak,
             wasReplay: false,
         });
     } catch (err) {
