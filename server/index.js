@@ -163,7 +163,7 @@ app.get('/api/user/profile', authenticateToken, verifyAndResetDailyHearts, async
     try {
         // By the time this code runs, verifyAndResetDailyHearts has already updated their rows if it's a new day!
         const result = await db.query(
-            `SELECT id, name, email, hearts, xp, lessons, coins FROM users WHERE id = $1`,
+            `SELECT id, name, email, hearts, xp, lessons, coins, notes FROM users WHERE id = $1`,
             [req.user.userId]
         );
 
@@ -372,6 +372,29 @@ app.post('/api/auth/reset-password', async (req, res) => {
     } catch (err) {
         console.error('reset-password error:', err);
         return res.status(500).json({ error: 'An internal server error occurred' });
+    }
+});
+
+
+// Save the user's personal note for ONE lesson. `notes` is a JSONB object on the
+// users row, mapping lessonId -> note text. We upsert just the one key.
+app.post('/api/user/notes', authenticateToken, async (req, res) => {
+    try {
+        const { lessonId, note } = req.body;
+        if (lessonId === undefined || lessonId === null || typeof note !== 'string') {
+            return res.status(400).json({ error: "Missing 'lessonId' or 'note' in body" });
+        }
+        const result = await db.query(
+            `UPDATE users
+             SET notes = jsonb_set(COALESCE(notes, '{}'::jsonb), ARRAY[$1], to_jsonb($2::text))
+             WHERE id = $3
+             RETURNING notes`,
+            [String(lessonId), note, req.user.userId]
+        );
+        return res.json({ success: true, notes: result.rows[0]?.notes ?? {} });
+    } catch (err) {
+        console.error('save-notes error:', err);
+        res.status(500).json({ error: "Failed to save notes" });
     }
 });
 
