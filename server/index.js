@@ -793,7 +793,10 @@ app.get('/api/lessons/:id', async (req, res) => {
                     transformed.appData = exerciseData;
                     break;
             }
-            
+
+            // Post-answer explanation, present on most gradable exercises.
+            transformed.feedback = exerciseData.feedback || null;
+
             return transformed;
         });
         
@@ -908,7 +911,12 @@ app.post('/api/submit', async (req, res) => {
                     exerciseData = exercise.appData || {};
                     break;
             }
-            
+
+            // Preserve the post-answer explanation if the form provided one.
+            if (exercise.feedback != null && exercise.type !== 'VIP') {
+                exerciseData.feedback = exercise.feedback;
+            }
+
             // Insert exercise_data
             await client.query(
                 `INSERT INTO exercise_data (exercise_id, data) 
