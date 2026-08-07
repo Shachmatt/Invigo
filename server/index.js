@@ -194,7 +194,7 @@ app.get('/api/user/profile', authenticateToken, verifyAndResetDailyHearts, async
     try {
         // By the time this code runs, verifyAndResetDailyHearts has already updated their rows if it's a new day!
         const result = await db.query(
-            `SELECT id, name, email, hearts, xp, lessons, coins, notes, streak, streak_freezer
+            `SELECT id, name, email, hearts, xp, lessons, coins, notes, streak, streak_freezer, premium
              FROM users WHERE id = $1`,
             [req.user.userId]
         );
@@ -492,13 +492,65 @@ app.post('/api/shop/buy-freezer', authenticateToken, async (req, res) => {
 });
 
 
+// RevenueCat webhook — the source of truth for the `premium` expiry date. RevenueCat
+// POSTs subscription events here; configure a shared secret as the Authorization header
+// value in the RevenueCat dashboard and store the same value in REVENUECAT_WEBHOOK_AUTH.
+// The app identifies each RevenueCat user with our DB user id (Purchases.logIn(id)), so
+// event.app_user_id maps straight to users.id.
+app.post('/api/revenuecat/webhook', async (req, res) => {
+    try {
+        const expected = process.env.REVENUECAT_WEBHOOK_AUTH;
+        if (!expected || req.headers['authorization'] !== expected) {
+            return res.status(401).json({ error: 'unauthorized' });
+        }
+
+        const event = req.body && req.body.event;
+        if (!event) return res.status(400).json({ error: 'missing event' });
+
+        const userId = parseInt(event.app_user_id, 10);
+        if (!Number.isFinite(userId)) {
+            // Anonymous / not one of our users — ack so RevenueCat stops retrying.
+            return res.json({ ok: true });
+        }
+
+        const type = event.type;
+        const expMs = event.expiration_at_ms;
+
+        // Events that grant/extend access → set premium to the entitlement's expiry.
+        const GRANTS = [
+            'INITIAL_PURCHASE', 'RENEWAL', 'PRODUCT_CHANGE',
+            'UNCANCELLATION', 'NON_RENEWING_PURCHASE',
+        ];
+
+        if (GRANTS.includes(type) && expMs) {
+            await db.query(
+                `UPDATE users SET premium = to_timestamp($1::bigint / 1000.0) WHERE id = $2`,
+                [expMs, userId]
+            );
+        } else if (type === 'EXPIRATION') {
+            await db.query(`UPDATE users SET premium = NULL WHERE id = $1`, [userId]);
+        }
+        // CANCELLATION = auto-renew off but still active until expiry → leave premium as-is.
+
+        return res.json({ ok: true });
+    } catch (err) {
+        console.error('revenuecat webhook error:', err);
+        return res.status(500).json({ error: 'webhook failed' });
+    }
+});
+
+
 app.post('/api/user/lose-heart', authenticateToken, async (req, res) => {
     try {
-        // Safely decrement hearts by 1, but make sure it never goes below 0
+        // Decrement hearts by 1 (never below 0) — but premium users (active subscription)
+        // have infinite hearts, so their count is left untouched.
         const result = await db.query(
-            `UPDATE users 
-             SET hearts = GREATEST(0, hearts - 1) 
-             WHERE id = $1 
+            `UPDATE users
+             SET hearts = CASE
+                 WHEN premium IS NOT NULL AND premium > NOW() THEN hearts
+                 ELSE GREATEST(0, hearts - 1)
+             END
+             WHERE id = $1
              RETURNING hearts, coins, xp`,
             [req.user.userId]
         );
