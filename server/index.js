@@ -540,6 +540,39 @@ app.post('/api/revenuecat/webhook', async (req, res) => {
 });
 
 
+// Delete the logged-in user's account. Everything we keep about a user (progress, hearts,
+// coins, streak, notes, premium) lives in their users row, so deleting it removes all of it.
+// A Google Play subscription is NOT cancelled by this — the app tells the user to cancel it
+// in Google Play first. With REVENUECAT_SECRET_KEY set, the RevenueCat customer is deleted too.
+app.delete('/api/user', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const result = await db.query(`DELETE FROM users WHERE id = $1 RETURNING id`, [userId]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        const rcKey = process.env.REVENUECAT_SECRET_KEY;
+        if (rcKey) {
+            try {
+                const rc = await fetch(`https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(String(userId))}`, {
+                    method: 'DELETE',
+                    headers: { Authorization: `Bearer ${rcKey}` },
+                });
+                if (!rc.ok) console.warn('RevenueCat customer delete failed:', rc.status);
+            } catch (e) {
+                console.warn('RevenueCat customer delete error:', e.message);
+            }
+        }
+
+        return res.json({ success: true });
+    } catch (err) {
+        console.error('delete-account error:', err);
+        res.status(500).json({ error: "Účet se nepodařilo smazat" });
+    }
+});
+
+
 app.post('/api/user/lose-heart', authenticateToken, async (req, res) => {
     try {
         // Decrement hearts by 1 (never below 0) — but premium users (active subscription)
@@ -694,49 +727,6 @@ app.post('/api/login', async (req, res) => {
         console.error('Error during login execution:', err);
         return res.status(500).json({ error: 'An internal server error occurred' });
     }
-});
-
-
-//API endpoint  to get the user data
-app.get('/api/users', async (req, res) => {
-        try {
-            const result = await db.query(
-                `SELECT * FROM users;`
-            )
-            res.json(result.rows);
-
-        } catch (err) {
-        console.error('Error fetching users:', err);
-        res.status(500).json({ error: 'Error fetching users' });
-    } 
-
-
-
-
-});
-
-
-app.get('/api/users/:id', async (req, res) => {
-        try {
-            const userId = parseInt(req.params.id);
-            const result = await db.query(
-                `SELECT * FROM users WHERE id = $1`,
-                [userId]);
-
-             if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-                    res.json(result.rows[0]);
-
-
-        } catch (err) {
-        console.error('Error fetching users:', err);
-        res.status(500).json({ error: 'Error fetching users' });
-    } 
-
-
-
-
 });
 
 
