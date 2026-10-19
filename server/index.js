@@ -765,13 +765,14 @@ app.get('/api/lessons/:id', async (req, res) => {
         
         const lesson = lessonResult.rows[0];
         
-        // Get all exercises for this lesson
+        // Get all exercises for this lesson, in the order set in hyperlekce
+        // (the "position" column is created by the hyperlekce server on its start)
         const exercisesResult = await db.query(
-            `SELECT e.id, e.type, e.question, ed.data 
+            `SELECT e.id, e.type, e.question, ed.data
              FROM exercises e
              LEFT JOIN exercise_data ed ON e.id = ed.exercise_id
              WHERE e.lesson_id = $1
-             ORDER BY e.id`,
+             ORDER BY e.position NULLS LAST, e.id`,
             [lessonId]
         );
         
